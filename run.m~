@@ -62,9 +62,21 @@ function run()
     HJIextraArgs.visualize.deleteLastPlot = true; %delete previous plot as you update
     [data, tau, ~] = HJIPDE_solve(data0, tau, schemeData, 'minVOverTime', HJIextraArgs);
     [u, in_brs] = get_optimal_trajectory([0, 0, 0], data, tau, schemeData);
-    u
+
+    %% Calculate FMM Planner
+    
+    %% Calculate Spline PlanneR
+    
+    
+    %% Blending
+    
+        
+       
 end 
 
+function [] = FMM_planner(xinit, xgoal, cost_map)
+    
+end 
 
 function [u, in_brs] = get_optimal_trajectory(xinit, data, tau, schemeData)
     %check if this initial state is in the BRS/BRT
