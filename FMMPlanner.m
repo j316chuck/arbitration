@@ -1,13 +1,12 @@
-classdef SplinePlanner < handle
+classdef FMMPlanner < handle
     %SPLINEPLANNER Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
         num_waypts
-        horizon
-        goal
         max_linear_vel
         max_angular_vel
+        goal
         sd_obs
         sd_goal
         g2d
@@ -67,8 +66,8 @@ classdef SplinePlanner < handle
             all_rewards = [];
             plt_handles = {};
             
-            for ti=1:length(obj.disc_xy) %length(obj.disc_xyth)
-                candidate_goal = obj.disc_xy(ti, :);%obj.disc_xyth(ti, :);
+            for ti=1:length(obj.disc_2d) 
+                candidate_goal = obj.disc_2d(ti, :);
                 
                 % ignore candidate goals inside obstacles.
                 if eval_u(obj.g2d, obj.sd_obs, candidate_goal(1:2)) < 0

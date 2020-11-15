@@ -1,4 +1,4 @@
-function run()
+function test_blending();
     %% Read in Map Data
     map_name = './maps/bookstore.png';
     map_yaml = './maps/bookstore.yaml';
@@ -25,11 +25,12 @@ function run()
     occ_map(occ_map < map_data.free_thresh) = 0;
     occ_map(occ_map >= map_data.free_thresh) = 1; 
     % +1 for free -1 for for occupied 
-    occ_map = 1 - 2 * occ_map;
+    binary_occ_map = 1 - 2 * occ_map;
     % compute fmm map
-    signed_obs_map = compute_fmm_map(grid_2d, occ_map);
+    signed_obs_map = compute_fmm_map(grid_2d, binary_occ_map);
     heatmap(signed_obs_map);
-    contour(occ_map);
+    contour(binary_occ_map);
+    masked_obs_map = binary_occ_map .* occ_map;
     % Define grid
     grid_min = [gmin_2d; -pi]; % Lower corner of computation domain
     grid_max = [gmax_2d; pi];    % Upper corner of computation domain
@@ -39,34 +40,34 @@ function run()
     % Goal
     goal_radius = 1;
     goal = [5, 5, pi/2, 0.01];
-    sd_goal = -1 .* shapeCylinder(grid_2d, 3, goal(1:2), goal_radius); % 2D function (x,y)
-    contour(sd_goal); 
+    spline_goal = -1 .* shapeCylinder(grid_2d, 3, goal(1:2), goal_radius); % 2D function (x,y)
+    contour(spline_goal); 
     num_waypts = 50;
-    horizon = 8;
-    max_linear_vel = 2.5;
+    horizon = 4;
+    max_linear_vel = 1.5;
     max_angular_vel = 1;
     % Spline Planner
-    planner = SplinePlanner(num_waypts, ...
+    spline_planner = SplinePlanner(num_waypts, ...
                             horizon, ...
                             goal, ...
                             max_linear_vel, ...
                             max_angular_vel, ...
-                            signed_obs_map, ...
+                            masked_obs_map, ...
                             sd_goal, ...
                             grid_2d, ...
                             grid_3d, ...
                             grid_min, ...
                             grid_max, ...
                             N); 
-    start =[4, 4, 0, 0.01]; 
-    opt_spline = planner.plan(start, goal);
-            
-    %% Plot!
+    start = [1, 1, 0, 0.01]; 
+    opt_spline = spline_planner.plan(start, goal);
     xs = opt_spline{1};
     ys = opt_spline{2};
     u1s = opt_spline{3};
     u2s = opt_spline{4};
-    ths = opt_spline{5};
+    ths = opt_spline{5};  
+    robot_colors = [linspace(0.1, 0.9, length(xs))', zeros([length(xs),1]), zeros([length(xs),1])];
+    plot_traj(xs, ys, ths, robot_colors);
     
 
     %% Calculate the Safety Control
@@ -106,33 +107,21 @@ function run()
        
 end 
 
-function [] = FMM_planner(xinit, xgoal, cost_map)
-    
-end 
-
-function [u, in_brs] = get_optimal_trajectory(xinit, data, tau, schemeData)
-    %check if this initial state is in the BRS/BRT
-    %value = eval_u(g, data, x)
-    value = eval_u(schemeData.grid, data(:,:,:,end), xinit);
-    if value < 0
-        in_brs = true; 
-    else 
-        in_brs = false; 
-    end 
-    schemeData.dynSys.x = xinit; %set initial state of the dubins car
-
-    TrajextraArgs.uMode = schemeData.uMode; %set if control wants to min or max
-    TrajextraArgs.dMode = schemeData.dMode;
-    TrajextraArgs.visualize = true; %show plot
-    TrajextraArgs.fig_num = 2; %figure number
-
-    %we want to see the first two dimensions (x and y)
-    TrajextraArgs.projDim = [1 1 0]; 
-
-    %flip data time points so we start from the beginning of time
-    dataTraj = flip(data, 4);
-    [traj, ~] = computeOptTraj(schemeData.grid, dataTraj, tau, schemeData.dynSys, TrajextraArgs);
-    u = traj(:, 1);
+function plot_traj(xs, ys, ths, colors)
+    %     for i=1:length(xs)
+    %         %plot_car(xs(i), ys(i), ths(i), car_len, car_width, colors(i));
+    %         pos = [xs(i)-car_rad, ys(i)-car_rad, ...
+    %                car_rad*2, car_rad*2];
+    %         rectangle('position', pos, ...
+    %                     'curvature', [1,1], ...
+    %                     'EdgeColor', colors(i, :));
+    %     end
+    s = scatter(xs, ys, 'r', 'filled');
+    s.CData = colors; %[colors', zeros(length(xs), 1), zeros(length(xs), 1)];
+    q = quiver(xs, ys, cos(ths), sin(ths), 'Color', colors(end,:));
+    q.ShowArrowHead = 'off';
+    q.AutoScale = 'off';
+    q.AutoScaleFactor = 0.5;
 end
- 
+
 

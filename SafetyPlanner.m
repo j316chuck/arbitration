@@ -1,11 +1,9 @@
-classdef ReachAvoidPlanner < handle
-    %ReachAvoidPLANNER Summary of this class goes here
+classdef SafetyPlanner < handle
+    %   SafetyPLANNER Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
-        grid %3d
-        schemeData
-        dynSys
+        env 
         tau
         xstart
         xgoal 
@@ -21,19 +19,8 @@ classdef ReachAvoidPlanner < handle
     
     methods
         %% Constructs Reach Avoid Planner.
-        function obj = ReachAvoidPlanner(grid_3d, schemeData, tau)
-            if ~isequal(schemeData.uMode, 'min')
-                error("OptCtrl need to minimize distance to goal");
-            end
-           if ~isequal(schemeData.dMode, 'max')
-                error("OptDistb needs to maximize distance to goal");
-            end
-            obj.grid = grid_3d;
-            obj.schemeData = schemeData; 
-            obj.dynSys = schemeData.dynSys;
-            obj.tau = tau;
-            % Extra Args
-            obj.extraArgs.visualize = true;
+        function obj = ReachAvoidPlanner(env)
+                
         end
         
         %% Solves the HJPIDE reach avoid problem

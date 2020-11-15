@@ -5,60 +5,54 @@ classdef SplinePlanner < handle
     properties
         num_waypts
         horizon
-        goal
+        grid_2d
+        dynSys
         max_linear_vel
-        max_angular_vel
-        sd_obs
-        sd_goal
-        g2d
-        g3d
-        disc_2d
-        disc_3d
+        max_angular_vel 
         gmin
         gmax
-        gnums
+        gnum
+        gdisc
+        disc_2d
+        sd_obs
+        sd_goal
+        start
+        goal
     end
     
     methods
         %% Constructs Spline Planner.
-        function obj = SplinePlanner(num_waypts, ...
-                horizon, ...
-                goal, ...
-                max_linear_vel, ...
-                max_angular_vel, ...
-                sd_obs, ...
-                sd_goal, ...
-                g2d, ...
-                g3d, ...
-                gmin, gmax, gnums)
+        function obj = SplinePlanner(num_waypts, horizon, grid_2d, dynSys)
             obj.num_waypts = num_waypts;
             obj.horizon = horizon;
-            obj.goal = goal;
-            obj.max_linear_vel = max_linear_vel;
-            obj.max_angular_vel = max_angular_vel;
-            obj.sd_obs = sd_obs;
-            obj.sd_goal = sd_goal;
-            obj.g2d = g2d;
-            obj.g3d = g3d;
-            obj.gmin = gmin;
-            obj.gmax = gmax;
-            obj.gnums = gnums;
-            
-            gdisc = (gmax - gmin) ./ (gnums - 1);
-            [X2D,Y2D] = meshgrid(gmin(1):gdisc(1):gmax(1), ...
-                gmin(2):gdisc(2):gmax(2));
-            [X,Y,TH] = meshgrid(obj.g3d.min(1):obj.g3d.dx(1):obj.g3d.max(1), ...
-                obj.g3d.min(2):obj.g3d.dx(2):obj.g3d.max(2), ...
-                obj.g3d.min(3):obj.g3d.dx(3):obj.g3d.max(3));
+            obj.grid_2d = grid_2d;
+            obj.dynSys = dynSys;
+            obj.max_linear_vel = dynSys.vrange(2);
+            obj.max_angular_vel = dynSys.wMax;
+            obj.gmin = grid_2d.min';
+            obj.gmax = grid_2d.max';
+            obj.gnum = grid_2d.N';
+            obj.gdisc = (gmax - gmin) ./ (gnums - 1);
+            [X2D,Y2D] = meshgrid(obj.gmin(1):obj.gdisc(1):obj.gmax(1), ...
+                obj.gmin(2):obj.gdisc(2):obj.gmax(2));
             obj.disc_2d = [X2D(:), Y2D(:)];
-            obj.disc_3d = [X(:), Y(:), TH(:)];
+        end
+        
+        %% Updates the signed distance to goal.
+        function obj = set_sd_goal(obj, goal, sd_goal)
+            obj.goal = goal; 
+            obj.sd_goal = sd_goal;
+        end
+        %% Updates the signed distance to obsatacle.
+        function obj = set_sd_obs(obj, sd_obs)
+            obj.sd_obs = sd_obs;
         end
         
         %% Plans a path from start to goal.
-        function opt_spline = plan(obj, start, goal)
+        function opt_spline = plan(obj, start)
+            obj.start = start;
             
-            
-            opt_reward = -100000000000000.0;
+            opt_reward = 100000000000000.0;
             opt_spline = {};
             curr_spline = {};
             
@@ -71,12 +65,12 @@ classdef SplinePlanner < handle
                 candidate_goal = obj.disc_2d(ti, :);
                 
                 % ignore candidate goals inside obstacles.
-                if eval_u(obj.g2d, obj.sd_obs, candidate_goal(1:2)) < 0
+                if eval_u(obj.grid, obj.sd_obs, candidate_goal(1:2)) < 0
                     continue;
                 end
                 
                 % orientation should match with goal final vel ~= 0.
-                candidate_goal = [candidate_goal, goal(3), 0.01]; %[candidate_goal, 0.01];
+                candidate_goal = [candidate_goal, obj.goal(3), 0.01]; %[candidate_goal, 0.01];
                 
                 % Compute spline from start to candidate (x,y) goal.
                 curr_spline = ...
@@ -96,7 +90,7 @@ classdef SplinePlanner < handle
                 if (feasible_horizon <= obj.horizon)
                     reward = obj.eval_reward(curr_spline);
                     
-                    if (reward > opt_reward)
+                    if (reward < opt_reward)
                         opt_reward = reward;
                         opt_spline = curr_spline;
                         
@@ -179,14 +173,7 @@ classdef SplinePlanner < handle
             goal_r = eval_u(obj.g2d, obj.sd_goal, traj);
          
             reward = sum(obs_r + goal_r);
-        end
-        
-        %% Updates the signed distance to goal.
-        function obj = set_sd_goal(obj, sd_goal_new)
-            obj.sd_goal = sd_goal_new;
-        end
-
-                
+        end        
     end
 end
 
