@@ -69,20 +69,19 @@ classdef ReachAvoidPlanner < handle
 
         function plot_traj(obj)
             figure(5);
-            clf; 
             hold on;
-            plot(obj.xstart(1), obj.xstart(2), 'go', 'linewidth', 6);
-            plot(obj.xgoal(1), obj.xgoal(2), 'bo', 'linewidth', 6);
+            scatter(obj.xstart(1), obj.xstart(2), 100, 'black', 'o', 'filled');
+            scatter(obj.xgoal(1), obj.xgoal(2), 100, 'red', 'o', 'filled');
             
             traj = obj.opt_traj;          
             xs = traj(1, :); 
             ys = traj(2, :); 
             ths = traj(3, :);
-            s = scatter(xs, ys, 'r', 'filled');
+            s = scatter(xs, ys, 'green', 'filled');
             grid_xs = obj.grid.xs;
             colors = [linspace(0.1, 0.9, length(grid_xs))', zeros([length(grid_xs),1]), zeros([length(grid_xs),1])];
             s.CData = colors; 
-            q = quiver(xs, ys, cos(ths), sin(ths), 'Color', colors(end,:));
+            q = quiver(xs, ys, cos(ths), sin(ths), 'Color', 'g');
             q.ShowArrowHead = 'off';
             q.AutoScale = 'off';
             q.AutoScaleFactor = 0.1;

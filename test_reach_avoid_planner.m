@@ -14,12 +14,9 @@ pl = Plane(xstart, wMax, vrange, dMax);
 g = createGrid([0; 0; 0], [150; 150; 2*pi], [41; 41; 11]);
 xgoal = [75; 50; 0];
 target = shapeCylinder(g, 3, xgoal, 2);
-obs1 = shapeRectangleByCorners(g, [300; 250; -inf], [350; 300; inf]);
-obs2 = shapeRectangleByCorners(g, [5; 5; -inf], [145; 145; inf]);
-obs2 = -obs2;
 
 % modify
-obstacle = shapeCylinder(g, 3, [90; 65; 0], 10);
+obstacle = shapeCylinder(g, 3, [90; 65; 0], 5);
 
 %% Compute reachable set
 tau = 0:0.5:500;
