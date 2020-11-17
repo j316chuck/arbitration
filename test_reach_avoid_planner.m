@@ -13,7 +13,7 @@ pl = Plane(xstart, wMax, vrange, dMax);
 %% Target and obstacles
 g = createGrid([0; 0; 0], [150; 150; 2*pi], [41; 41; 11]);
 xgoal = [75; 50; 0];
-target = shapeCylinder(g, 3, xgoal, 2);
+target = shapeCylinder(g, 3, xgoal, 10);
 
 % modify
 obstacle = shapeCylinder(g, 3, [90; 65; 0], 5);

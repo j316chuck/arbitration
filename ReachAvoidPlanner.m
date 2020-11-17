@@ -77,12 +77,12 @@ classdef ReachAvoidPlanner < handle
             xs = traj(1, :); 
             ys = traj(2, :); 
             ths = traj(3, :);
-            s = scatter(xs, ys, 'green', 'filled');
+            s = scatter(xs, ys, 20, 'green', 'filled');
             grid_xs = obj.grid.xs;
             colors = [linspace(0.1, 0.9, length(grid_xs))', zeros([length(grid_xs),1]), zeros([length(grid_xs),1])];
             s.CData = colors; 
-            q = quiver(xs, ys, cos(ths), sin(ths), 'Color', 'g');
-            q.ShowArrowHead = 'off';
+            q = quiver(xs, ys, cos(ths), sin(ths), 'Color', 'cyan');
+            q.ShowArrowHead = 'on';
             q.AutoScale = 'off';
             q.AutoScaleFactor = 0.1;
             hold off;
