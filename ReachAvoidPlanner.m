@@ -83,9 +83,9 @@ classdef ReachAvoidPlanner < handle
             colors = [linspace(0.1, 0.9, length(grid_xs))', zeros([length(grid_xs),1]), zeros([length(grid_xs),1])];
             s.CData = colors; 
             q = quiver(xs, ys, cos(ths), sin(ths), 'Color', colors(end,:));
-            q.ShowArrowHead = 'on';
+            q.ShowArrowHead = 'off';
             q.AutoScale = 'off';
-            q.AutoScaleFactor = 0.3;
+            q.AutoScaleFactor = 0.1;
             hold off;
         end
     end
