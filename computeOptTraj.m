@@ -57,9 +57,9 @@ tauLength = length(tau);
 % maxIter = 1.25*tauLength;
 
 % Initialize trajectory
-traj = nan(g.dim + 2, tauLength);
+traj = zeros(5, 1);
 tEarliest = 1;
-
+traj_idx = 1;
 t = 0;
 while iter <= tauLength 
   % Determine the earliest time that the current state is in the reachable set
@@ -95,13 +95,13 @@ while iter <= tauLength
   end
   
   % Update trajectory
-  Deriv = computeGradients(g, BRS_at_t);
-  deriv = eval_u(g, Deriv, dynSys.x);
-  u = dynSys.optCtrl(tau(tEarliest), dynSys.x, deriv, uMode);
-  traj(:,iter) = [dynSys.x(:); u(:)];
+  grad = computeGradients(g, BRS_at_t);
+  deriv_at_x = eval_u(g, grad, dynSys.x);
+  u = dynSys.optCtrl(tau(tEarliest), dynSys.x, deriv_at_x, uMode);
+  traj(:, traj_idx) = [dynSys.x(:); u(:)];
+  traj_idx = traj_idx + 1;
   dynSys.updateState(u, optTrajDt, dynSys.x);
   
-  % Record new point on nominal trajectory
   t = t + optTrajDt;
   if t >= tau(iter + 1)
       iter = iter + 1;
@@ -109,6 +109,5 @@ while iter <= tauLength
 end
 
 % Delete unused indices
-traj(:,iter:end) = [];
-traj_tau = tau(1:iter-1);
+traj_tau = tau(1:iter);
 end

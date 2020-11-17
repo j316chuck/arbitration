@@ -34,20 +34,17 @@ function test_blending()
     
     %% Plane parameters
     env.reachAvoidDynsys.x = start(1:3);
-    hji_tstart = 0;
-    hji_tend = 500;
-    hji_dt = 0.5;
-    tau = hji_tstart:hji_dt:hji_tend;
+    tau = 0:0.5:500;
     reach_avoid_planner = ReachAvoidPlanner(env.grid_3d, env.reachAvoidSchemeData, tau);
 
     %% Plan!
     % note: need a non-zero starting velocity to avoid singularities in spline
     sd_goal_3d = shapeCylinder(env.grid_3d, 3, goal(1:3), goal_radius); 
     obstacle = -repmat(env.obs_map, 1, 1, env.grid_3d.N(3));
-    reach_avoid_planner.solve_reach_avoid(start(1:3), goal(1:3), sd_goal_3d, obstacle);    
+    optTrajDt = spline_planner.dt;
+    reach_avoid_planner.solve_reach_avoid(start(1:3), goal(1:3), sd_goal_3d, obstacle, optTrajDt);    
     reach_avoid_planner.plot_traj();
-        
-       
+    print(1);   
 end 
 
 function plot_traj(xs, ys, ths, colors)
