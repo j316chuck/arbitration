@@ -64,10 +64,9 @@ function run()
     %% Plot!
     xs = opt_spline{1};
     ys = opt_spline{2};
-    u1s = opt_spline{3};
-    u2s = opt_spline{4};
-    ths = opt_spline{5};
-    
+    ths = opt_spline{3};
+    u1s = opt_spline{4};
+    u2s = opt_spline{5};
 
     %% Calculate the Safety Control
     data0 = repmat(signed_obs_map, 1, 1, grid_3d.N(3));

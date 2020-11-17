@@ -1,4 +1,4 @@
-classdef SafetyPlanner < handle
+classdef BlendingPlanner < handle
     %   SafetyPLANNER Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -18,8 +18,9 @@ classdef SafetyPlanner < handle
     end
     
     methods
-        %% Constructs Reach Avoid Planner.
-        function obj = ReachAvoidPlanner(env)
+        %% Constructs Blending Planner.
+        function obj = BlendingPlanner(env, )
+            obj.env = env;
                 
         end
         

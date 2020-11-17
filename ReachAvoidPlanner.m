@@ -37,7 +37,7 @@ classdef ReachAvoidPlanner < handle
         end
         
         %% Solves the HJPIDE reach avoid problem
-        function [traj] = solve_reach_avoid(obj, xstart, xgoal, goal_map, obstacle_map)
+        function [traj] = solve_reach_avoid(obj, xstart, xgoal, goal_map, obstacle_map, optTrajDt)
             if ~isequal(size(goal_map), obj.grid.N')
                 error("Shape of goal map is not equal to the grid shape");
             end 
@@ -54,12 +54,13 @@ classdef ReachAvoidPlanner < handle
             obj.extraArgs.stopInit = xstart; 
             obj.extraArgs.plotData.plotDims = [1 1 0];
             obj.extraArgs.plotData.projpt = xstart(3);
-             obj.extraArgs.projDim = [1 1 0];
+            obj.extraArgs.projDim = [1 1 0];
             % Solve 
             [obj.data, obj.data_tau, ~] = ...
                 HJIPDE_solve(obj.goal_map, obj.tau, obj.schemeData, 'minVWithL', obj.extraArgs);          
             obj.valueFun = obj.data(:, :, :, end);
             % compute opt traj;
+            obj.extraArgs.optTrajDt = optTrajDt;
             [obj.opt_traj, obj.opt_traj_tau] = computeOptTraj(obj.grid, ... 
                                 flip(obj.data,4), obj.data_tau, obj.dynSys, obj.extraArgs);
             traj = obj.opt_traj;
@@ -70,8 +71,8 @@ classdef ReachAvoidPlanner < handle
             figure(5);
             clf; 
             hold on;
-            plot(obj.xstart(1), obj.xstart(2), 'rx');
-            plot(obj.xgoal(1), obj.xgoal(2), 'bo');
+            plot(obj.xstart(1), obj.xstart(2), 'go', 'linewidth', 6);
+            plot(obj.xgoal(1), obj.xgoal(2), 'bo', 'linewidth', 6);
             
             traj = obj.opt_traj;          
             xs = traj(1, :); 
@@ -82,9 +83,9 @@ classdef ReachAvoidPlanner < handle
             colors = [linspace(0.1, 0.9, length(grid_xs))', zeros([length(grid_xs),1]), zeros([length(grid_xs),1])];
             s.CData = colors; 
             q = quiver(xs, ys, cos(ths), sin(ths), 'Color', colors(end,:));
-            q.ShowArrowHead = 'off';
+            q.ShowArrowHead = 'on';
             q.AutoScale = 'off';
-            q.AutoScaleFactor = 0.5;
+            q.AutoScaleFactor = 0.3;
             hold off;
         end
     end

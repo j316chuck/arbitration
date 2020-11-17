@@ -5,6 +5,7 @@ classdef SplinePlanner < handle
     properties
         num_waypts
         horizon
+        dt
         grid_2d
         dynSys
         max_linear_vel
@@ -25,6 +26,7 @@ classdef SplinePlanner < handle
         function obj = SplinePlanner(num_waypts, horizon, grid_2d, dynSys)
             obj.num_waypts = num_waypts;
             obj.horizon = horizon;
+            obj.dt = horizon / (num_waypts - 1);
             obj.grid_2d = grid_2d;
             obj.dynSys = dynSys;
             obj.max_linear_vel = dynSys.vrange(2);
@@ -32,7 +34,7 @@ classdef SplinePlanner < handle
             obj.gmin = grid_2d.min';
             obj.gmax = grid_2d.max';
             obj.gnum = grid_2d.N';
-            obj.gdisc = (gmax - gmin) ./ (gnums - 1);
+            obj.gdisc = (obj.gmax - obj.gmin) ./ (obj.gnum - 1);
             [X2D,Y2D] = meshgrid(obj.gmin(1):obj.gdisc(1):obj.gmax(1), ...
                 obj.gmin(2):obj.gdisc(2):obj.gmax(2));
             obj.disc_2d = [X2D(:), Y2D(:)];
@@ -65,7 +67,7 @@ classdef SplinePlanner < handle
                 candidate_goal = obj.disc_2d(ti, :);
                 
                 % ignore candidate goals inside obstacles.
-                if eval_u(obj.grid, obj.sd_obs, candidate_goal(1:2)) < 0
+                if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
                     continue;
                 end
                 
@@ -147,8 +149,8 @@ classdef SplinePlanner < handle
                 max_angular_vel, ...
                 final_t)
             % Compute max linear and angular speed.
-            plan_max_lin_vel = max(spline{3});
-            plan_max_angular_vel = max(abs(spline{4}));
+            plan_max_lin_vel = max(spline{4});
+            plan_max_angular_vel = max(abs(spline{5}));
             
             % Compute required horizon to acheive max speed of planned spline.
             feasible_horizon_speed = ...
@@ -169,8 +171,8 @@ classdef SplinePlanner < handle
             traj = [xs', ys'];
             % TODO: add in penalty for orientation too?
             % TODO: add in penalty for human-driven vehicle prediction.
-            obs_r = eval_u(obj.g2d, obj.sd_obs, traj);
-            goal_r = eval_u(obj.g2d, obj.sd_goal, traj);
+            obs_r = eval_u(obj.grid_2d, obj.sd_obs, traj);
+            goal_r = eval_u(obj.grid_2d, obj.sd_goal, traj);
          
             reward = sum(obs_r + goal_r);
         end        

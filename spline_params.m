@@ -22,6 +22,11 @@ function params = spline_params()
     dv = 1;
     params.max_linear_vel = 6.; 
     params.max_angular_vel = 1.; 
+    xstart = [100; 75; 220*pi/180];
+    wMax = 1;
+    vrange = [1.1,6];
+    dMax = [0.3; 0.3];
+    params.dynSys = Plane(xstart, wMax, vrange, dMax);
 
     %% Signed dist functions.
     % Axis-aligned rectangular obstacle convention is:
@@ -65,11 +70,10 @@ function params = spline_params()
     upper = [0, 7.75] + params.obs_padding;
     params.final_lane_sd = shapeRectangleByCorners(params.g2d, lower, upper);
     params.sd_obs = min(params.sd_obs, params.final_lane_sd);
-
+    params.sd_obs = -params.sd_obs;
     %% Create goal signed distance (positive in goal, negative outside).
     params.goal_radius = 1;
-    params.sd_goal = -1 .* shapeCylinder(params.g2d, 3, params.goal(1:2), params.goal_radius); % 2D function (x,y)
-    % params.sd_goal = -1 .* shapeCylinder(params.g3d, [], params.goal(1:3), params.goal_radius); % 3D function (x,y,theta)
+    params.sd_goal = shapeCylinder(params.g2d, 3, params.goal(1:2), params.goal_radius); % 2D function (x,y)
 
 
     %% Create spline planner!
@@ -77,12 +81,8 @@ function params = spline_params()
     %% Create spline planner!
     params.planner = SplinePlanner(params.num_waypts, ...
                                 params.horizon, ...
-                                params.goal, ...
-                                params.max_linear_vel, ...
-                                params.max_angular_vel, ...
-                                params.sd_obs, ...
-                                params.sd_goal, ...
                                 params.g2d, ...
-                                params.g3d, ...
-                                params.gmin, params.gmax, params.gnums);             
+                                params.dynSys);   
+                         
+                            
 end 

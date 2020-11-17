@@ -3,16 +3,17 @@ params = spline_params();
             
 %% Plan!
 % note: need a non-zero starting velocity to avoid singularities in spline
-start = [-5.6, -2.25, 0, 0.01]; 
-opt_spline = params.planner.plan(start, params.goal);
+start = [5, -2.25, pi/2, 0.01]; 
+params.planner.set_sd_goal(params.goal, params.sd_goal);
+params.planner.set_sd_obs(params.sd_obs);
+opt_spline = params.planner.plan(start);
             
 %% Plot!
 xs = opt_spline{1};
 ys = opt_spline{2};
-u1s = opt_spline{3};
-u2s = opt_spline{4};
-ths = opt_spline{5};
-
+ths = opt_spline{3};
+u1s = opt_spline{4};
+u2s = opt_spline{5};
 
 %% Plot velocity profiles
 figure(1)
