@@ -30,7 +30,7 @@ function test_blending()
     figure(5);
     clf; 
     hold on 
-    [M, c] = contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'color', 'red');
+    [M, c] = contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'LineWidth);
     %caxis([min(M(:)),max(M(:))]);
     %colormap([[1, 0, 0]]);
     [M, c] = contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, env.obs_map, [0 0], 'DisplayName', 'obstacle');

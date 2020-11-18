@@ -26,7 +26,7 @@ function [params] = load_env()
     % Define 3D grid
     gmin_3d = [gmin_2d; -pi];   % Lower corner of computation domain
     gmax_3d = [gmax_2d; pi];    % Upper corner of computation domain
-    gnum_3d = [gnum_2d; 11];    % Number of grid points per dimension
+    gnum_3d = [gnum_2d; 16];    % Number of grid points per dimension
     pdDim = 3;                  % 3rd dimension is periodic
     grid_3d = createGrid(gmin_3d, gmax_3d, gnum_3d, pdDim);
     params.grid_3d = grid_3d; 
