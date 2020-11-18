@@ -53,7 +53,7 @@ function [params] = load_env()
     xstart = [1; 1; 0];
     wMax = 1;
     vRange = [1, 1.5];
-    dMax = [0.1; 0.1];
+    dMax = [0; 0];
     reachAvoidDynSys = Plane(xstart, wMax, vRange, dMax); 
     params.reachAvoidDynSys = reachAvoidDynSys; 
     

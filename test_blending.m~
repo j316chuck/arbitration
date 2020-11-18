@@ -1,41 +1,48 @@
 function test_blending()
-    % plot the grid and the obstacle map;     
-    env = load_env();
-    % Goal
-    goal_radius = 0.2;
-    goal = [3, 2.75, pi/2, 0.01];
-    sd_goal_map = shapeCylinder(env.grid_2d, 3, goal(1:2), goal_radius); % 2D function (x,y)
-    num_waypts = 50;
+    %run_planners();
+    blend_planners();
+    plot_planners(); 
+end 
+
+function blend_planners() 
+    load('./data/planners.mat'); 
     horizon = 4;
+    num_waypts = 50;
+    dt = horizon / (num_waypts - 1);
+    splineDynSys = env.splineDynSys;
+    splineDynSys.x = [1, 1, 0];
+    state = [splineDynSys.x, 0.01, 0];
+    traj = zeros(5, 1); 
+    zero_levelset_threshold = 0;
+    for i = 1:length(num_waypts)
+        updated_num_waypts = num_waypts - (i - 1); 
+        updated_horizon = horizon - (dt * (i - 1)); 
+        spline_planner.set_spline_planning_points(updated_num_waypts, updated_horizon); 
+        if brs_planner.get_value(state(1:3)) <= zero_levelset_threshold
+            u = brs_planner.get_avoid_u(state(1:3));
+        else 
+            spline_planner.plan(state(1:4));
+            u = spline_planner.get_mpc_control();
+        end 
+        traj(:, end+1) = [splineDynSys.x, u]'; % old state and new control 
+        splineDynSys.updateState(u, dt, splineDynSys.x); 
+        state = [splineDynSys.x', u]; % new state and new control
+    end 
+    blend_xs = traj(1, :);
+    blend_ys = traj(2, :);
+    blend_ths = traj(3, :);
+    save('./data/blenders.mat', 'blend_xs', 'blend_ys', 'blend_ths'); 
+end
 
-    % Spline Planner
-    spline_planner = SplinePlanner(num_waypts, horizon, env.grid_2d, env.splineDynSys); 
-    spline_planner.set_sd_goal(goal, sd_goal_map);
-    spline_planner.set_sd_obs(-env.masked_obs_map);
-    start = [1, 1, 0, 0.01]; 
-    opt_spline = spline_planner.plan(start);
-
-    %% Plane parameters
-    env.reachAvoidDynsys.x = start(1:3);
-    tau = 0:0.5:500;
-    reach_avoid_planner = ReachAvoidPlanner(env.grid_3d, env.reachAvoidSchemeData, tau);
-
-    %% Plan!
-    % note: need a non-zero starting velocity to avoid singularities in spline
-    sd_goal_3d = shapeCylinder(env.grid_3d, 3, goal(1:3), goal_radius); 
-    obstacle = -repmat(env.obs_map, 1, 1, env.grid_3d.N(3));
-    optTrajDt = spline_planner.dt;
-    reach_avoid_planner.solve_reach_avoid(start(1:3), goal(1:3), sd_goal_3d, obstacle, optTrajDt);   
-
+function plot_planners()
+    load('./data/planners.mat');
+    load('./blend/blenders.mat');
     figure(5);
-    clf; 
     hold on 
-    [M, c] = contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'LineWidth);
-    %caxis([min(M(:)),max(M(:))]);
-    %colormap([[1, 0, 0]]);
-    [M, c] = contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, env.obs_map, [0 0], 'DisplayName', 'obstacle');
-    %caxis([min(M(:)),max(M(:))]);
-    %colormap([[1, 1, 1]]);
+    plot_traj(blend_xs, blend_y, reach_avoid_ths, 'green', 'reach avoid');
+    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, brs_planner.valueFun(:, :, 6), [0 0], 'DisplayName', 'BRS (theta = 0)', 'color', 'magenta');
+    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'color', 'red');
+    contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, env.obs_map, [0 0], 'DisplayName', 'obstacle');
     
     reach_avoid_xs = reach_avoid_planner.opt_traj(1, :);
     reach_avoid_ys = reach_avoid_planner.opt_traj(2, :);
@@ -58,7 +65,42 @@ function test_blending()
     ylabel('y (meters)');
     legend('Location', 'SouthWest');
     title('Blending Controls');
+end 
 
+function run_planners() 
+    % plot the grid and the obstacle map;     
+    env = load_env();
+    % Goal
+    goal_radius = 0.5;
+    goal = [3, 2.75, pi/2, 0.01];
+    sd_goal_map = shapeCylinder(env.grid_2d, 3, goal(1:2), goal_radius); % 2D function (x,y)
+    num_waypts = 50;
+    horizon = 4;
+
+    % Spline Planner
+    spline_planner = SplinePlanner(num_waypts, horizon, env.grid_2d, env.splineDynSys); 
+    spline_planner.set_sd_goal(goal, sd_goal_map);
+    spline_planner.set_sd_obs(-env.masked_obs_map);
+    start = [1, 1, 0, 0.01]; 
+    opt_spline = spline_planner.plan(start);
+
+    %% Plane parameters
+    env.reachAvoidDynsys.x = start(1:3);
+    tau = 0:0.5:10;
+    reach_avoid_planner = ReachAvoidPlanner(env.grid_3d, env.reachAvoidSchemeData, tau);
+    
+    %% Plan!
+    % note: need a non-zero starting velocity to avoid singularities in spline
+    sd_goal_3d = shapeCylinder(env.grid_3d, 3, goal(1:3), goal_radius); 
+    obstacle = -repmat(env.obs_map, 1, 1, env.grid_3d.N(3));
+    optTrajDt = spline_planner.dt;
+    reach_avoid_planner.solve_reach_avoid(start(1:3), goal(1:3), sd_goal_3d, obstacle, optTrajDt);   
+    
+    
+    brs_planner = BRSAvoidPlanner(env.grid_3d, env.avoidBrsSchemeData, tau);
+    brs_planner.solve_brs_avoid(obstacle); 
+    save('./data/planners.mat');
+    
 end 
 
 function plot_traj(xs, ys, ths, color, name)

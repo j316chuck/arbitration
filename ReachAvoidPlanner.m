@@ -25,8 +25,8 @@ classdef ReachAvoidPlanner < handle
             if ~isequal(schemeData.uMode, 'min')
                 error("OptCtrl need to minimize distance to goal");
             end
-           if ~isequal(schemeData.dMode, 'max')
-                error("OptDistb needs to maximize distance to goal");
+            if ~isequal(schemeData.dMode, 'max')
+                error("OptDist needs to maximize distance to goal");
             end
             obj.grid = grid_3d;
             obj.schemeData = schemeData; 

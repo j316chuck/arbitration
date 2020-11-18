@@ -19,6 +19,7 @@ classdef SplinePlanner < handle
         sd_goal
         start
         goal
+        opt_spline
     end
     
     methods
@@ -49,6 +50,12 @@ classdef SplinePlanner < handle
         function obj = set_sd_obs(obj, sd_obs)
             obj.sd_obs = sd_obs;
         end
+        
+        function obj = set_spline_planning_points(obj, num_waypts, horizon)
+            obj.num_waypts = num_waypts;
+            obj.horizon = horizon;
+            obj.dt = horizon / (num_waypts - 1); 
+        end 
         
         %% Plans a path from start to goal.
         function opt_spline = plan(obj, start)
@@ -95,18 +102,18 @@ classdef SplinePlanner < handle
                     if (reward < opt_reward)
                         opt_reward = reward;
                         opt_spline = curr_spline;
-                        
-                        %                         hold on
-                        %                         contour(obj.g2d.xs{1}, obj.g2d.xs{2}, obj.sd_obs, [0,0]);
-                        %                         colors = [linspace(0,1,length(curr_spline{1}))', ...
-                        %                                     zeros([length(curr_spline{1}), 1]), ...
-                        %                                     zeros([length(curr_spline{1}), 1])];
-                        %                         p = plot(curr_spline{1}, curr_spline{2});
-                        %                         xlim([obj.gmin(1),obj.gmax(1)]);
-                        %                         ylim([obj.gmin(2),obj.gmax(2)]);
-                        %                         all_rewards(end+1) = reward;
-                        %                         plt_handles{end+1} = p;
-                        %                         grid on
+%                         figure(6);
+%                         hold on
+%                         contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.sd_obs, [0,0]);
+%                         colors = [linspace(0,1,length(curr_spline{1}))', ...
+%                                     zeros([length(curr_spline{1}), 1]), ...
+%                                     zeros([length(curr_spline{1}), 1])];
+%                         p = plot(curr_spline{1}, curr_spline{2});
+%                         xlim([obj.gmin(1),obj.gmax(1)]);
+%                         ylim([obj.gmin(2),obj.gmax(2)]);
+%                         all_rewards(end+1) = reward;
+%                         plt_handles{end+1} = p;
+                        grid on
                         
                     end
                 end
@@ -115,8 +122,15 @@ classdef SplinePlanner < handle
             if isempty(opt_spline)
                 error("Unable to find dynamically feasible and low cost spline plan!");
             end
-            
+            obj.opt_spline = opt_spline;
         end
+       
+        function u = get_mpc_control(obj)
+            if isempty(obj.opt_spline) || length(obj.opt_spline{4}) < 1
+                error("Opt spline not calculated yet"); 
+            end 
+            u = [obj.opt_spline{4}(2), obj.opt_spline{5}(2)];
+        end 
         
         %% Check (and correct) if spline is inside environment bounds.
         function checked_spline = sanity_check_spline(obj, curr_spline)
