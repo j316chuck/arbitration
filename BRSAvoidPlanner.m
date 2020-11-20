@@ -52,8 +52,9 @@ classdef BRSAvoidPlanner < handle
             % Value of the derivative at that particular state
             current_deriv = eval_u(obj.grid, obj.derivValueFun, x);
             % Get the optimal control to apply at this state
-            uOpt = obj.dynSys.optCtrl(x, current_deriv, obj.schemeData.uMode);
+            uOpt = obj.dynSys.optCtrl(obj.data_tau(end), x, current_deriv, obj.schemeData.uMode);
         end
+        
         function [value] = get_value(obj, x)
             value = eval_u(obj.grid, obj.valueFun, x);
         end

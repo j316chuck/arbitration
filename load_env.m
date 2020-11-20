@@ -52,15 +52,15 @@ function [params] = load_env()
     % reach avoid dynSys
     xstart = [1; 1; 0];
     wMax = 1;
-    vRange = [1, 1.5];
-    dMax = [0; 0];
+    vRange = [0.1, 1.0];
+    dMax = [0.1; 0.1];
     reachAvoidDynSys = Plane(xstart, wMax, vRange, dMax); 
     params.reachAvoidDynSys = reachAvoidDynSys; 
     
     % avoid brs dynSys
     xstart = [1; 1; 0];
     wMax = 1;
-    vRange = [1, 1.5];
+    vRange = [0.1, 1.0];
     dMax = [0.1; 0.1];
     avoidBrsDynSys = Plane(xstart, wMax, vRange, dMax); 
     params.avoidBrsDynSys = avoidBrsDynSys; 
@@ -68,7 +68,7 @@ function [params] = load_env()
     % spline Planner DynSys
     xstart = [1; 1; 0];
     wMax = 1;
-    vRange = [1, 1.5];
+    vRange = [0.1, 1.0];
     dMax = [0.1; 0.1];
     splineDynSys = Plane(xstart, wMax, vRange, dMax); 
     params.splineDynSys = splineDynSys; 

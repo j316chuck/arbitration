@@ -7,32 +7,38 @@ end
 function blend_planners() 
     load('./data/planners.mat'); 
     horizon = 4;
-    num_waypts = 50;
+    num_waypts = 40;
     dt = horizon / (num_waypts - 1);
     splineDynSys = env.splineDynSys;
     splineDynSys.x = [1, 1, 0]';
     state = [splineDynSys.x', 0.1, 0];
     traj = zeros(6, 0); 
     zero_levelset_threshold = 0;
+    mpc = false;
+    use_avoid_control = 1;
     for i = 1:num_waypts
         %updated_num_waypts = num_waypts - (i - 1); 
         %updated_horizon = horizon - (dt * (i - 1)); 
-        spline_planner.set_spline_planning_points(num_waypts, horizon);
-        [~, vf_slice] = proj(env.grid_3d, brs_planner.valueFun, [0 0 1], state(3));
         if brs_planner.get_value(state(1:3)) <= zero_levelset_threshold
             u = brs_planner.get_avoid_u(state(1:3))';
             use_avoid_control = 1;
         else 
-            spline_planner.plan(state(1:4));
-            u = spline_planner.get_mpc_control();
+            if mpc || use_avoid_control == 1
+               spline_planner.set_spline_planning_points(num_waypts, horizon);
+               spline_planner.plan(state(1:4));
+               u = spline_planner.get_mpc_control();
+            else 
+               u = spline_planner.get_next_control();
+            end 
             use_avoid_control = 0; 
-        end 
-        traj(:, end+1) = [splineDynSys.x', u, use_avoid_control]'; % old state and new control 
+        end
+        [~, vf_slice] = proj(env.grid_3d, brs_planner.valueFun, [0 0 1], state(3));
+        traj(:, end+1) = [splineDynSys.x', u, use_avoid_control]'; % old state and new control
         splineDynSys.updateState(u, dt, splineDynSys.x); 
-        state = [splineDynSys.x', u]; % new state and new control
         opt_cur_spline = spline_planner.opt_spline;
         blend_name = 'safe blending';
         save('./data/blenders.mat', 'traj', 'blend_name', 'opt_cur_spline', 'vf_slice', 'state'); 
+        state = [splineDynSys.x', u]; % new state and new control
         plot_planners(); 
     end 
 end
@@ -52,7 +58,8 @@ function plot_planners()
     %contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, brs_planner.valueFun(:, :, 9), [0 0], 'DisplayName', 'BRS (theta = 0)', 'color', 'magenta');
     %contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, brs_planner.valueFun(:, :, 12), [0 0], 'DisplayName', 'BRS (theta = pi/2)', 'color', '#FFC0CB');
     name = sprintf("BRS (theta = %s)", state(3));
-    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, vf_slice, [0 0], 'DisplayName', name, 'color', '#CC1FCB');
+    %contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, vf_slice, [0 0], 'DisplayName', name, 'color', '#CC1FCB');
+    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, vf_slice, 'DisplayName', name, 'color', '#CC1FCB');
 
     % plot mpc spline traj
     mpc_spline_xs = opt_cur_spline{1}; 
@@ -63,7 +70,7 @@ function plot_planners()
     orig_spline_xs = opt_spline{1};
     orig_spline_ys = opt_spline{2};
     orig_spline_ths = opt_spline{3};
-    plot_traj(orig_spline_xs, orig_spline_ys, orig_spline_ths, 'cyan', 'orig spline');
+    %plot_traj(orig_spline_xs, orig_spline_ys, orig_spline_ths, 'cyan', 'orig spline');
     % plot blending traj
     blend_xs = traj(1, :); 
     blend_ys = traj(2, :); 

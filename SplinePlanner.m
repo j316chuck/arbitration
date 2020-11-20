@@ -6,6 +6,7 @@ classdef SplinePlanner < handle
         num_waypts
         horizon
         dt
+        cur_spline_ctrl_idx
         grid_2d
         dynSys
         max_linear_vel
@@ -28,6 +29,7 @@ classdef SplinePlanner < handle
             obj.num_waypts = num_waypts;
             obj.horizon = horizon;
             obj.dt = horizon / (num_waypts - 1);
+            obj.cur_spline_ctrl_idx = 1;
             obj.grid_2d = grid_2d;
             obj.dynSys = dynSys;
             obj.max_linear_vel = dynSys.vrange(2);
@@ -55,6 +57,7 @@ classdef SplinePlanner < handle
             obj.num_waypts = num_waypts;
             obj.horizon = horizon;
             obj.dt = horizon / (num_waypts - 1); 
+            obj.cur_spline_ctrl_idx = 1;
         end 
         
         %% Plans a path from start to goal.
@@ -126,6 +129,21 @@ classdef SplinePlanner < handle
         end
        
         function u = get_mpc_control(obj)
+            if isempty(obj.opt_spline) || length(obj.opt_spline{4}) < 1
+                error("Opt spline not calculated yet"); 
+            end 
+            u = [obj.opt_spline{4}(2), obj.opt_spline{5}(2)];
+        end 
+        
+        function u = get_next_control(obj)
+            if isempty(obj.opt_spline) || length(obj.opt_spline{4}) < 1
+                error("Opt spline not calculated yet"); 
+            end 
+            u = [obj.opt_spline{4}(obj.cur_spline_ctrl_idx), obj.opt_spline{5}(obj.cur_spline_ctrl_idx)];
+            obj.cur_spline_ctrl_idx =  obj.cur_spline_ctrl_idx + 1;
+        end 
+        
+        function u = get_replan_mpc_control(obj, replan)
             if isempty(obj.opt_spline) || length(obj.opt_spline{4}) < 1
                 error("Opt spline not calculated yet"); 
             end 
