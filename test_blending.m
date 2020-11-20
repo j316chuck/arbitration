@@ -1,7 +1,7 @@
 function test_blending()
     %run_planners();
-    %blend_planners();
-    plot_planners(); 
+    blend_planners();
+    %plot_planners(); 
 end 
 
 function blend_planners() 
@@ -11,25 +11,28 @@ function blend_planners()
     dt = horizon / (num_waypts - 1);
     splineDynSys = env.splineDynSys;
     splineDynSys.x = [1, 1, 0]';
-    state = [splineDynSys.x', 0.01, 0];
-    traj = zeros(5, 0); 
+    state = [splineDynSys.x', 0.1, 0];
+    traj = zeros(6, 0); 
     zero_levelset_threshold = 0;
     for i = 1:num_waypts
-        updated_num_waypts = num_waypts - (i - 1); 
-        updated_horizon = horizon - (dt * (i - 1)); 
-        spline_planner.set_spline_planning_points(updated_num_waypts, updated_horizon); 
+        %updated_num_waypts = num_waypts - (i - 1); 
+        %updated_horizon = horizon - (dt * (i - 1)); 
+        spline_planner.set_spline_planning_points(num_waypts, horizon);
+        [~, vf_slice] = proj(env.grid_3d, brs_planner.valueFun, [0 0 1], state(3));
         if brs_planner.get_value(state(1:3)) <= zero_levelset_threshold
-            u = brs_planner.get_avoid_u(state(1:3));
+            u = brs_planner.get_avoid_u(state(1:3))';
+            use_avoid_control = 1;
         else 
             spline_planner.plan(state(1:4));
             u = spline_planner.get_mpc_control();
+            use_avoid_control = 0; 
         end 
-        traj(:, end+1) = [splineDynSys.x', u]'; % old state and new control 
+        traj(:, end+1) = [splineDynSys.x', u, use_avoid_control]'; % old state and new control 
         splineDynSys.updateState(u, dt, splineDynSys.x); 
         state = [splineDynSys.x', u]; % new state and new control
-        
+        opt_cur_spline = spline_planner.opt_spline;
         blend_name = 'safe blending';
-        save('./data/blenders.mat', 'traj', 'blend_name'); 
+        save('./data/blenders.mat', 'traj', 'blend_name', 'opt_cur_spline', 'vf_slice', 'state'); 
         plot_planners(); 
     end 
 end
@@ -40,37 +43,99 @@ function plot_planners()
     figure(5);
     clf
     hold on     
+    % plot environment, goal, and start
+    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'color', 'red');
+    contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, env.obs_map, [0 0], 'DisplayName', 'obstacle');
+    scatter(goal(1), goal(2), 100, 'k', 'x', 'DisplayName', 'goal'); 
+    scatter(start(1), start(2), 75, 'b', 'o', 'filled', 'DisplayName', 'start'); 
+    % plot value functions
+    %contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, brs_planner.valueFun(:, :, 9), [0 0], 'DisplayName', 'BRS (theta = 0)', 'color', 'magenta');
+    %contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, brs_planner.valueFun(:, :, 12), [0 0], 'DisplayName', 'BRS (theta = pi/2)', 'color', '#FFC0CB');
+    name = sprintf("BRS (theta = %s)", state(3));
+    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, vf_slice, [0 0], 'DisplayName', name, 'color', '#CC1FCB');
+
+    % plot mpc spline traj
+    mpc_spline_xs = opt_cur_spline{1}; 
+    mpc_spline_ys = opt_cur_spline{2}; 
+    mpc_spline_ths = opt_cur_spline{3}; 
+    plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'mpc spline');    
+    % plot original spline traj
+    orig_spline_xs = opt_spline{1};
+    orig_spline_ys = opt_spline{2};
+    orig_spline_ths = opt_spline{3};
+    plot_traj(orig_spline_xs, orig_spline_ys, orig_spline_ths, 'cyan', 'orig spline');
+    % plot blending traj
     blend_xs = traj(1, :); 
     blend_ys = traj(2, :); 
     blend_ths = traj(3, :); 
-    plot_traj(blend_xs, blend_ys, blend_ths, 'yellow', blend_name);
-    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, brs_planner.valueFun(:, :, 9), [0 0], 'DisplayName', 'BRS (theta = 0)', 'color', 'magenta');
-    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, brs_planner.valueFun(:, :, 12), [0 0], 'DisplayName', 'BRS (theta = pi/2)', 'color', '#FFC0CB');
-    contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'color', 'red');
-    contourf(env.grid_2d.xs{1}, env.grid_2d.xs{2}, env.obs_map, [0 0], 'DisplayName', 'obstacle');
-    
+    use_avoid_probs = traj(6, :);
+    plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
+    % plot reach avoid traj
     reach_avoid_xs = reach_avoid_planner.opt_traj(1, :);
     reach_avoid_ys = reach_avoid_planner.opt_traj(2, :);
     reach_avoid_ths = reach_avoid_planner.opt_traj(3, :);
-    plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
-    
-    opt_xs = opt_spline{1};
-    opt_ys = opt_spline{2};
-    opt_ths = opt_spline{3};
-    plot_traj(opt_xs, opt_ys, opt_ths, 'cyan', 'spline');
-    scatter(goal(1), goal(2), 100, 'k', 'x', 'DisplayName', 'goal'); 
-    scatter(start(1), start(2), 75, 'b', 'o', 'filled', 'DisplayName', 'start'); 
-  
-    xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
-    ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
+    %plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
+    % figure parameters
+    xlim([1, 4]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
+    ylim([1, 4]); %ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
     view(0, 90)
     set(gcf, 'color', 'white')
     set(gcf, 'position', [0, 0, 800, 800])
     xlabel('x (meters)');
     ylabel('y (meters)');
-    legend('Location', 'SouthWest');
+    legend('Location', 'NorthWest');
     title('Blending Controls');
 end 
+
+function set_quiver_colors(q, probs)
+    %// Get the current colormap
+    currentColormap = colormap(gca);
+
+    %// Now determine the color to make each arrow using a colormap
+    [~, ~, ind] = histcounts(probs, size(currentColormap, 1));
+
+    %// Now map this to a colormap to get RGB
+    cmap = uint8(ind2rgb(ind(:), currentColormap) * 255);
+    cmap(:,:,4) = 255;
+    cmap = permute(repmat(cmap, [1 3 1]), [2 1 3]);
+
+    %// We repeat each color 3 times (using 1:3 below) because each arrow has 3 vertices
+    set(q.Head, ...
+        'ColorBinding', 'interpolated', ...
+        'ColorData', reshape(cmap(1:3,:,:), [], 4).');   %'
+
+    %// We repeat each color 2 times (using 1:2 below) because each tail has 2 vertices
+    set(q.Tail, ...
+        'ColorBinding', 'interpolated', ...
+        'ColorData', reshape(cmap(1:2,:,:), [], 4).');
+end 
+
+function plot_traj(xs, ys, ths, color, name)
+    s = scatter(xs, ys, 15, 'black', 'filled', 'DisplayName', name);
+    s.HandleVisibility = 'off';
+    q = quiver(xs, ys, cos(ths), sin(ths), 'Color', color);
+    q.DisplayName = name;
+    q.HandleVisibility = 'on';
+    q.ShowArrowHead = 'on';
+    q.AutoScale = 'on';
+    q.AutoScaleFactor = 0.3;
+end
+
+function plot_traj_probs(xs, ys, ths, probs, name)
+%     rgb_indexes = int32(probs * 255) + 1; 
+%     currentColormap = colormap(gca);
+%     M = currentColormap(rgb_indexes, :); 
+    s = scatter(xs, ys, 15, 'black', 'filled');
+    s.HandleVisibility = 'off';
+    q = quiver(xs, ys, cos(ths), sin(ths));
+    set_quiver_colors(q, probs); 
+    q.DisplayName = name;
+    q.HandleVisibility = 'on';
+    q.ShowArrowHead = 'on';
+    q.AutoScale = 'on';
+    q.DisplayName = name;
+    q.AutoScaleFactor = 0.3;
+end
 
 function run_planners() 
     % plot the grid and the obstacle map;     
@@ -105,16 +170,8 @@ function run_planners()
     brs_planner = BRSAvoidPlanner(env.grid_3d, env.avoidBrsSchemeData, tau);
     brs_planner.solve_brs_avoid(obstacle); 
     save('./data/planners.mat');
-    
 end 
 
-function plot_traj(xs, ys, ths, color, name)
-    s = scatter(xs, ys, color, 'filled', 'DisplayName', name);
-    q = quiver(xs, ys, cos(ths), sin(ths), 'Color', color);
-    q.HandleVisibility = 'off';
-    q.ShowArrowHead = 'on';
-    q.AutoScale = 'on';
-    q.AutoScaleFactor = 0.3;
-end
+
 
 
