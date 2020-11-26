@@ -1,20 +1,20 @@
 function test_blending()
-    %run_planners();
+    run_planners();
     blend_planners();
     %plot_planners(); 
 end 
 
 function blend_planners() 
     load('./data/planners.mat'); 
-    horizon = 4;
-    num_waypts = 40;
+    horizon = 6;
+    num_waypts = 60;
     dt = horizon / (num_waypts - 1);
     splineDynSys = env.splineDynSys;
     splineDynSys.x = [1, 1, 0]';
     state = [splineDynSys.x', 0.1, 0];
     traj = zeros(6, 0); 
-    zero_levelset_threshold = 0;
-    mpc = false;
+    zero_levelset_threshold = 0.1;
+    mpc = true;
     use_avoid_control = 1;
     for i = 1:num_waypts
         %updated_num_waypts = num_waypts - (i - 1); 
@@ -70,7 +70,7 @@ function plot_planners()
     orig_spline_xs = opt_spline{1};
     orig_spline_ys = opt_spline{2};
     orig_spline_ths = opt_spline{3};
-    %plot_traj(orig_spline_xs, orig_spline_ys, orig_spline_ths, 'cyan', 'orig spline');
+    plot_traj(orig_spline_xs, orig_spline_ys, orig_spline_ths, 'cyan', 'orig spline');
     % plot blending traj
     blend_xs = traj(1, :); 
     blend_ys = traj(2, :); 
