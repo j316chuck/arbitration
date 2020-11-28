@@ -1,20 +1,23 @@
 function test_blending()
-    run_planners();
-    blend_planners();
-    %plot_planners(); 
-end 
+    %run_planners();
+    %blend_planners();
+    for a = [0.75] %[0.75, 0.9, 0.95, 1]
+        alpha_blend_planners(a);
+    end
+    plot_planners();
+end
 
 function blend_planners() 
     load('./data/planners.mat'); 
-    horizon = 6;
-    num_waypts = 60;
+    horizon = 5;
+    num_waypts = 50;
     dt = horizon / (num_waypts - 1);
     splineDynSys = env.splineDynSys;
     splineDynSys.x = [1, 1, 0]';
-    state = [splineDynSys.x', 0.1, 0];
+    state = [splineDynSys.x', 0.01, 0];
     traj = zeros(6, 0); 
-    zero_levelset_threshold = 0.1;
-    mpc = true;
+    zero_levelset_threshold = 0;
+    mpc = false;
     use_avoid_control = 1;
     for i = 1:num_waypts
         %updated_num_waypts = num_waypts - (i - 1); 
@@ -26,10 +29,8 @@ function blend_planners()
             if mpc || use_avoid_control == 1
                spline_planner.set_spline_planning_points(num_waypts, horizon);
                spline_planner.plan(state(1:4));
-               u = spline_planner.get_mpc_control();
-            else 
-               u = spline_planner.get_next_control();
             end 
+            u = spline_planner.get_next_control();
             use_avoid_control = 0; 
         end
         [~, vf_slice] = proj(env.grid_3d, brs_planner.valueFun, [0 0 1], state(3));
@@ -43,11 +44,50 @@ function blend_planners()
     end 
 end
 
+
+function alpha_blend_planners(alpha) 
+    load('./data/planners.mat'); 
+    horizon = 5;
+    num_waypts = 50;
+    dt = horizon / (num_waypts - 1);
+    splineDynSys = env.splineDynSys;
+    splineDynSys.x = [1, 1, 0]';
+    state = [splineDynSys.x', 0.01, 0];
+    traj = zeros(6, 0); 
+    zero_levelset_threshold = 0;
+    mpc = false;
+    use_avoid_control = 1;
+    alpha_value = alpha;
+    replan_index = 5;
+    spline_planner.plan(state(1:4));
+    for i = 1:num_waypts
+        updated_num_waypts = num_waypts - (i - 1); 
+        updated_horizon = horizon - (dt * (i - 1)); 
+        u1 = spline_planner.get_next_control();
+        u2 = brs_planner.get_avoid_u(state(1:3))';
+        u = alpha * u1 + (1 - alpha) * u2;
+        [~, vf_slice] = proj(env.grid_3d, brs_planner.valueFun, [0 0 1], state(3));
+        traj(:, end+1) = [splineDynSys.x', u, use_avoid_control]'; % old state and new control
+        splineDynSys.updateState(u, dt, splineDynSys.x); 
+        opt_cur_spline = spline_planner.opt_spline;
+        blend_name = 'safe blending';
+        save('./data/blenders.mat', 'traj', 'blend_name', 'opt_cur_spline', 'vf_slice', 'state', 'alpha_value', 'replan_index'); 
+        state = [splineDynSys.x', u]; % new state and new control
+        plot_planners(); 
+        replan = mod(i, replan_index) == 0;
+        if replan
+           spline_planner.set_spline_planning_points(updated_num_waypts, updated_horizon);
+           spline_planner.plan(state(1:4));
+        end 
+    end 
+end
+
+
 function plot_planners()
     load('./data/planners.mat');
     load('./data/blenders.mat');
     figure(5);
-    clf
+    close all;
     hold on     
     % plot environment, goal, and start
     contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'color', 'red');
@@ -60,7 +100,7 @@ function plot_planners()
     name = sprintf("BRS (theta = %s)", state(3));
     %contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, vf_slice, [0 0], 'DisplayName', name, 'color', '#CC1FCB');
     contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, vf_slice, 'DisplayName', name, 'color', '#CC1FCB');
-
+    
     % plot mpc spline traj
     mpc_spline_xs = opt_cur_spline{1}; 
     mpc_spline_ys = opt_cur_spline{2}; 
@@ -77,22 +117,28 @@ function plot_planners()
     blend_ths = traj(3, :); 
     use_avoid_probs = traj(6, :);
     plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
+    calc_jerk(blend_xs, blend_ys);
     % plot reach avoid traj
     reach_avoid_xs = reach_avoid_planner.opt_traj(1, :);
     reach_avoid_ys = reach_avoid_planner.opt_traj(2, :);
     reach_avoid_ths = reach_avoid_planner.opt_traj(3, :);
-    %plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
+    plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
+    
+    obj = objective();
+    obj.
     % figure parameters
-    xlim([1, 4]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
-    ylim([1, 4]); %ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
+    xlim([0, 5]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
+    ylim([0, 5]); %ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
     view(0, 90)
     set(gcf, 'color', 'white')
     set(gcf, 'position', [0, 0, 800, 800])
     xlabel('x (meters)');
     ylabel('y (meters)');
     legend('Location', 'NorthWest');
-    title('Blending Controls');
+    title(sprintf("Alpha %.2f Replan Index %.2f Blending Controls", alpha_value, replan_index));
+    savefig(sprintf("./outputs/replan_index_%d_naive_blending_%.2f.fig", replan_index, alpha_value)); 
 end 
+
 
 function set_quiver_colors(q, probs)
     %// Get the current colormap
@@ -151,8 +197,8 @@ function run_planners()
     goal_radius = 0.5;
     goal = [3, 2.75, pi/2, 0.01];
     sd_goal_map = shapeCylinder(env.grid_2d, 3, goal(1:2), goal_radius); % 2D function (x,y)
+    horizon = 5;
     num_waypts = 50;
-    horizon = 4;
 
     % Spline Planner
     spline_planner = SplinePlanner(num_waypts, horizon, env.grid_2d, env.splineDynSys); 

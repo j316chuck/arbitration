@@ -123,9 +123,10 @@ classdef SplinePlanner < handle
             end
             
             if isempty(opt_spline)
-                error("Unable to find dynamically feasible and low cost spline plan!");
-            end
-            obj.opt_spline = opt_spline;
+                warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
+            else
+                obj.opt_spline = opt_spline;
+            end 
         end
        
         function u = get_mpc_control(obj)
@@ -143,12 +144,7 @@ classdef SplinePlanner < handle
             obj.cur_spline_ctrl_idx =  obj.cur_spline_ctrl_idx + 1;
         end 
         
-        function u = get_replan_mpc_control(obj, replan)
-            if isempty(obj.opt_spline) || length(obj.opt_spline{4}) < 1
-                error("Opt spline not calculated yet"); 
-            end 
-            u = [obj.opt_spline{4}(2), obj.opt_spline{5}(2)];
-        end 
+
         
         %% Check (and correct) if spline is inside environment bounds.
         function checked_spline = sanity_check_spline(obj, curr_spline)
