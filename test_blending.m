@@ -1,9 +1,9 @@
 function test_blending()
     %run_planners();
-    %blend_planners();
-    for a = [0.75] %[0.75, 0.9, 0.95, 1]
-        alpha_blend_planners(a);
-    end
+    blend_planners();
+    %for a = [0.75] %[0.75, 0.9, 0.95, 1]
+    %    alpha_blend_planners(a);
+    %end
     plot_planners();
 end
 
@@ -87,7 +87,7 @@ function plot_planners()
     load('./data/planners.mat');
     load('./data/blenders.mat');
     figure(5);
-    close all;
+    clf;
     hold on     
     % plot environment, goal, and start
     contour(env.grid_2d.xs{1}, env.grid_2d.xs{2}, -sd_goal_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'color', 'red');
@@ -117,15 +117,18 @@ function plot_planners()
     blend_ths = traj(3, :); 
     use_avoid_probs = traj(6, :);
     plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
-    calc_jerk(blend_xs, blend_ys);
     % plot reach avoid traj
     reach_avoid_xs = reach_avoid_planner.opt_traj(1, :);
     reach_avoid_ys = reach_avoid_planner.opt_traj(2, :);
     reach_avoid_ths = reach_avoid_planner.opt_traj(3, :);
     plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
     
-    obj = objective();
-    obj.
+    obj = objectives();
+    obj.calc_kinematics(blend_xs, blend_ys, spline_planner.dt); 
+    obj.calc_dist_to_goal(blend_xs, blend_ys, goal); 
+    obj.calc_dist_to_opt_traj(blend_xs, blend_ys, reach_avoid_xs, reach_avoid_ys)
+    obj.calc_safety_score(blend_xs, blend_ys, blend_ths, brs_planner); 
+    
     % figure parameters
     xlim([0, 5]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
     ylim([0, 5]); %ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
@@ -135,8 +138,9 @@ function plot_planners()
     xlabel('x (meters)');
     ylabel('y (meters)');
     legend('Location', 'NorthWest');
-    title(sprintf("Alpha %.2f Replan Index %.2f Blending Controls", alpha_value, replan_index));
-    savefig(sprintf("./outputs/replan_index_%d_naive_blending_%.2f.fig", replan_index, alpha_value)); 
+    title("Blending Controls");
+    %title(sprintf("Alpha %.2f Replan Index %.2f Blending Controls", alpha_value, replan_index));
+    %savefig(sprintf("./outputs/replan_index_%d_naive_blending_%.2f.fig", replan_index, alpha_value)); 
 end 
 
 

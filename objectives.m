@@ -1,4 +1,4 @@
-classdef objective
+classdef objectives
     %Evaluate objective costs
     
     properties
@@ -17,16 +17,17 @@ classdef objective
     end
     
     methods
-        function obj = objective()
+        function obj = objectives(obj)
         end
         
-        function [d] = l2_dist(x, y) 
+        function [d] = l2_dist(~, x, y) 
             d = (x .^ 2 + y .^ 2) .^ 0.5;
         end 
         
         function obj = calc_kinematics(obj, x, y, dt)
             if length(x) < 4 || length(y) < 4 || length(x) ~= length(y)
-                obj.jerk = [];
+                obj.avg_vel = -1;
+                obj.avg_accel = -1;
                 obj.avg_jerk = -1;
                 return 
             end
@@ -36,19 +37,19 @@ classdef objective
             ay = vy(2:length(vy)) - vy(1:length(vy) - 1); 
             jx = ax(2:length(ax)) - ax(1:length(ax) - 1);
             jy = ay(2:length(ay)) - ay(1:length(ay) - 1); 
-            obj.vel = 1/dt .* l2_dist(vx, vy); 
+            obj.vel = 1/dt .* obj.l2_dist(vx, vy); 
             obj.avg_vel = mean(obj.vel);
-            obj.accel = 1/dt .* l2_dist(ax, ay); 
+            obj.accel = 1/dt .* obj.l2_dist(ax, ay); 
             obj.avg_accel = mean(obj.accel); 
-            obj.jerk =  1/dt .* l2_dist(jx, jy);
-            obj.avg_jerk = mean(obj.jerk); 
-            
+            obj.jerk =  1/dt .* obj.l2_dist(jx, jy);
+            obj.avg_jerk = mean(obj.jerk);  
         end 
 
         function obj = calc_dist_to_goal(obj, x, y, goal)
             if length(x) ~= length(y) || length(goal) ~= 2
                 obj.dist_to_goal = [];
                 obj.avg_dist_to_goal = -1;
+                return 
             end 
             obj.dist_to_goal = l2_dist(x(:) - goal(1), y(:) - goal(2));
             obj.avg_dist_to_goal = mean(obj.dist_to_goal);
