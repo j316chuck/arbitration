@@ -1,4 +1,4 @@
-classdef objectives
+classdef objectives < handle
     %Evaluate objective costs
     
     properties
@@ -17,7 +17,7 @@ classdef objectives
     end
     
     methods
-        function obj = objectives(obj)
+        function obj = objectives()
         end
         
         function [d] = l2_dist(~, x, y) 
@@ -46,12 +46,12 @@ classdef objectives
         end 
 
         function obj = calc_dist_to_goal(obj, x, y, goal)
-            if length(x) ~= length(y) || length(goal) ~= 2
+            if length(x) ~= length(y) 
                 obj.dist_to_goal = [];
                 obj.avg_dist_to_goal = -1;
                 return 
             end 
-            obj.dist_to_goal = l2_dist(x(:) - goal(1), y(:) - goal(2));
+            obj.dist_to_goal = obj.l2_dist(x(:) - goal(1), y(:) - goal(2));
             obj.avg_dist_to_goal = mean(obj.dist_to_goal);
         end 
         
@@ -72,7 +72,7 @@ classdef objectives
             obj.avg_dist_to_opt_traj = mean(obj.dist_to_opt_traj);
         end 
         
-        function obj = calc_safety_score(obj, x, y, ths, safety_planner)
+        function pbj = calc_safety_score(obj, x, y, ths, safety_planner)
             if length(x) ~= length(y) || length(y) ~= length(ths)
                 obj.safety_score = [];
                 obj.avg_safety_score = -1;

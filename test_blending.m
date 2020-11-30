@@ -1,9 +1,9 @@
 function test_blending()
     %run_planners();
-    blend_planners();
-    %for a = [0.75] %[0.75, 0.9, 0.95, 1]
-    %    alpha_blend_planners(a);
-    %end
+    %blend_planners();
+    for a = [0.75] %[0.75, 0.9, 0.95, 1]
+        alpha_blend_planners(a);
+    end
     plot_planners();
 end
 
@@ -139,6 +139,7 @@ function plot_planners()
     ylabel('y (meters)');
     legend('Location', 'NorthWest');
     title("Blending Controls");
+    
     %title(sprintf("Alpha %.2f Replan Index %.2f Blending Controls", alpha_value, replan_index));
     %savefig(sprintf("./outputs/replan_index_%d_naive_blending_%.2f.fig", replan_index, alpha_value)); 
 end 
