@@ -77,7 +77,7 @@ classdef PlannerBlender < handle
                 warn("blending scheme not supported");  
                 return
             end
-            obj.plot_planners();
+            obj.plot_all();
         end 
         
         function switch_blend(obj)
@@ -107,7 +107,7 @@ classdef PlannerBlender < handle
                 obj.state = [obj.dynSys.x', u]; % new state and new control
                 replan_time = replan_time + obj.dt;
                 if obj.exp.plot_every_iter 
-                    obj.plot_planners()
+                    obj.plot_all()
                 end 
             end 
         end 
@@ -132,7 +132,7 @@ classdef PlannerBlender < handle
                 obj.state = [obj.dynSys.x', u]; % new state and new control
                 replan_time = replan_time + obj.dt;
                 if obj.exp.plot_every_iter 
-                    obj.plot_planners()
+                    obj.plot_all()
                 end 
             end 
         end 
@@ -159,13 +159,59 @@ classdef PlannerBlender < handle
                 obj.state = [obj.dynSys.x', u]; % new state and new control
                 replan_time = replan_time + obj.dt;
                 if obj.exp.plot_every_iter 
-                    obj.plot_planners()
+                    obj.plot_all()
                 end 
             end 
         end 
         
         function [prob] = sigmoid(obj, x)
             prob = 1 / (1 + exp(-x/obj.blending.temperature));
+        end 
+        
+        function plot_all(obj)
+            obj.plot_planners();
+            obj.plot_auxillary();
+        end 
+        
+        function plot_auxillary(obj)
+            figure(10);
+            clf;
+            hold on 
+            set(gcf,'Position', [10 10 800 900])
+            subplot(3, 2, 1); 
+            plot(1:length(obj.scores.vel), obj.scores.vel, 'bo--');
+            title("Linear Velocity")
+            xlabel("way point");
+            ylabel("mps"); 
+            subplot(3, 2, 2); 
+            plot(1:length(obj.scores.accel), obj.scores.accel, 'bo--');
+            title("Linear Accel")
+            xlabel("way point");
+            ylabel("mps"); 
+            subplot(3, 2, 3); 
+            plot(1:length(obj.scores.jerk), obj.scores.jerk, 'bo--');
+            title("Linear Jerk")
+            xlabel("way point");
+            ylabel("mps"); 
+            subplot(3, 2, 4); 
+            plot(1:length(obj.scores.safety_score), obj.scores.safety_score, 'bo--');
+            title("Safety Score")
+            xlabel("way point");
+            ylabel("brs value function"); 
+            subplot(3, 2, 5); 
+            plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
+            title("Dist to Opt Traj")
+            xlabel("way point");
+            ylabel("meters"); 
+            subplot(3, 2, 6); 
+            plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
+            title("Dist to Goal")
+            xlabel("way point");
+            ylabel("meters"); 
+            if obj.exp.save_plot
+                savefigpath = sprintf("%s/metrics.fig", obj.output_folder);
+                savefig(savefigpath); 
+            end 
         end 
         
         function plot_planners(obj)
@@ -231,6 +277,8 @@ classdef PlannerBlender < handle
                 savefigpath = sprintf("%s/plot.fig", obj.output_folder);
                 savefig(savefigpath); 
             end 
+            obj.plot_auxillary();
+
         end 
         
         function plot_traj(obj, xs, ys, ths, color, name)
