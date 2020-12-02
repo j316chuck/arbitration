@@ -19,7 +19,7 @@ function [params] = default_hyperparams()
     params.num_waypts = 50;
     params.horizon = 5;
     % blending params
-    params.replan_dt = 100;
+    params.replan_dt = 2.5;
     params.blending_scheme = 'distance';
     params.zero_level_set = 0.1;
     params.alpha = 0.75;
