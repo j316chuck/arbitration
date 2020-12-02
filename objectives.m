@@ -72,7 +72,7 @@ classdef objectives < handle
             obj.avg_dist_to_opt_traj = mean(obj.dist_to_opt_traj);
         end 
         
-        function pbj = calc_safety_score(obj, x, y, ths, safety_planner)
+        function obj = calc_safety_score(obj, x, y, ths, safety_planner)
             if length(x) ~= length(y) || length(y) ~= length(ths)
                 obj.safety_score = [];
                 obj.avg_safety_score = -1;

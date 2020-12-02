@@ -1,5 +1,5 @@
 function test_blending()
-    %run_planners();
+    run_planners();
     %blend_planners();
     for a = [0.75] %[0.75, 0.9, 0.95, 1]
         alpha_blend_planners(a);
@@ -180,9 +180,6 @@ function plot_traj(xs, ys, ths, color, name)
 end
 
 function plot_traj_probs(xs, ys, ths, probs, name)
-%     rgb_indexes = int32(probs * 255) + 1; 
-%     currentColormap = colormap(gca);
-%     M = currentColormap(rgb_indexes, :); 
     s = scatter(xs, ys, 15, 'black', 'filled');
     s.HandleVisibility = 'off';
     q = quiver(xs, ys, cos(ths), sin(ths));
@@ -196,36 +193,27 @@ function plot_traj_probs(xs, ys, ths, probs, name)
 end
 
 function run_planners() 
-    % plot the grid and the obstacle map;     
-    env = load_env();
-    % Goal
-    goal_radius = 0.5;
-    goal = [3, 2.75, pi/2, 0.01];
-    sd_goal_map = shapeCylinder(env.grid_2d, 3, goal(1:2), goal_radius); % 2D function (x,y)
-    horizon = 5;
-    num_waypts = 50;
+    % plot the grid and the obstacle map;
+    params = default_hyperparams();
+    exp = load_exp(params);
 
-    % Spline Planner
-    spline_planner = SplinePlanner(num_waypts, horizon, env.grid_2d, env.splineDynSys); 
-    spline_planner.set_sd_goal(goal, sd_goal_map);
-    spline_planner.set_sd_obs(-env.masked_obs_map);
-    start = [1, 1, 0, 0.01]; 
-    opt_spline = spline_planner.plan(start);
+    opt_spline = exp.spline_planner.plan(exp.start);
 
     %% Plane parameters
-    env.reachAvoidDynsys.x = start(1:3);
-    tau = 0:0.5:10;
-    reach_avoid_planner = ReachAvoidPlanner(env.grid_3d, env.reachAvoidSchemeData, tau);
+    %env.reachAvoidDynsys.x = start(1:3);
+    %tau = 0:0.5:10;
+    %reach_avoid_planner = ReachAvoidPlanner(env.grid_3d, env.reachAvoidSchemeData, tau);
     
     %% Plan!
     % note: need a non-zero starting velocity to avoid singularities in spline
-    sd_goal_3d = shapeCylinder(env.grid_3d, 3, goal(1:3), goal_radius); 
-    obstacle = -repmat(env.obs_map, 1, 1, env.grid_3d.N(3));
-    optTrajDt = spline_planner.dt;
-    reach_avoid_planner.solve_reach_avoid(start(1:3), goal(1:3), sd_goal_3d, obstacle, optTrajDt);   
+    %sd_goal_3d = shapeCylinder(env.grid_3d, 3, goal(1:3), goal_radius); 
+    %obstacle = -repmat(env.obs_map, 1, 1, env.grid_3d.N(3));
+    %optTrajDt = spline_planner.dt;
+    
+    exp.reach_avoid_planner.solve_reach_avoid(, goal(1:3), sd_goal_3d, obstacle, optTrajDt);   
     
     
-    brs_planner = BRSAvoidPlanner(env.grid_3d, env.avoidBrsSchemeData, tau);
+    %brs_planner = BRSAvoidPlanner(env.grid_3d, env.avoidBrsSchemeData, tau);
     brs_planner.solve_brs_avoid(obstacle); 
     save('./data/planners.mat');
 end 
