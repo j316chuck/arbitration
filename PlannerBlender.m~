@@ -78,6 +78,7 @@ classdef PlannerBlender < handle
                 return
             end
             obj.plot_planners();
+            obj.plot_metrics();
         end 
         
         function switch_blend(obj)
@@ -151,9 +152,20 @@ classdef PlannerBlender < handle
                 end 
                 u1 = obj.spline_planner.get_next_control();
                 u2 = obj.brs_planner.get_avoid_u(obj.state(1:3))';
-                alpha = 
-                u =  * u1 + (1 - obj.blending.alpha) * u2;
-                obj.blend_traj(:, i) = [obj.dynSys.x', u, obj.blending.alpha]'; % old state and new control
+                v = obj.brs_planner.get_value(obj.state(1:3));
+                if isequal(obj.blending.blend_function, ) 
+                   alpha = obj.sigmoid(v); 
+                elseif 
+                    alpha = obj.shift_sig(v);
+                elseif 
+                    alpha = obj.sub(v);
+                else
+                    warn("Improper blend function selection"); 
+                    return;
+                end 
+                assert(0 <= alpha && alpha <= 1);
+                u = alpha * u1 + (1 - alpha) * u2;
+                obj.blend_traj(:, i) = [obj.dynSys.x', u, alpha]'; % old state and new control
                 obj.dynSys.updateState(u, obj.dt, obj.dynSys.x); 
                 obj.state = [obj.dynSys.x', u]; % new state and new control
                 replan_time = replan_time + obj.dt;
@@ -161,11 +173,69 @@ classdef PlannerBlender < handle
                     obj.plot_planners()
                 end 
             end 
-            return; 
         end 
         
         function [prob] = sigmoid(obj, x)
-            prob = 1 / (1 + exp(-x/obj.blending.temperature));
+            prob = 1 / (1 + exp(x/obj.blending.temperature));
+        end 
+       
+        function [prob] = shift_sig(obj, x)
+            prob = min(2 / (1 + exp(x/obj.blending.temperature)), 1);
+        end 
+       
+        function [prob] = sub(obj, x)
+            prob = max(min(1, 1-(x/obj.blending.temperature)), 0);
+        end 
+        
+        function plot_metrics(obj)
+            figure(10);
+            clf;
+            hold on 
+            set(gcf,'Position', [10 10 800 900])
+            subplot(4, 2, 1); 
+            plot(1:length(obj.scores.vel), obj.scores.vel, 'bo--');
+            title("Linear Velocity");
+            xlabel("way point");
+            ylabel("mps"); 
+            subplot(4, 2, 2); 
+            plot(1:length(obj.blend_traj(5, :)), obj.blend_traj(5, :), 'bo--');
+            title("Angular Velocity");
+            xlabel("way point");
+            ylabel("mps"); 
+            subplot(4, 2, 3); 
+            plot(1:length(obj.scores.accel), obj.scores.accel, 'bo--');
+            title("Linear Accel");
+            xlabel("way point");
+            ylabel("mps"); 
+            subplot(4, 2, 4); 
+            plot(1:length(obj.scores.jerk), obj.scores.jerk, 'bo--');
+            title("Linear Jerk");
+            xlabel("way point");
+            ylabel("mps"); 
+            subplot(4, 2, 5); 
+            plot(1:length(obj.scores.safety_score), obj.scores.safety_score, 'bo--');
+            title("Safety Score");
+            xlabel("way point");
+            ylabel("brs value function"); 
+            subplot(4, 2, 6); 
+            plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
+            title("Dist to Opt Traj");
+            xlabel("way point");
+            ylabel("meters"); 
+            subplot(4, 2, 7); 
+            plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
+            title("Dist to Goal");
+            xlabel("way point");
+            ylabel("meters"); 
+            subplot(4, 2, 8); 
+            plot(1:length(obj.blend_traj(6, :)), obj.blend_traj(6, :), 'bo--');
+            title("Blend Probability");
+            xlabel("way point");
+            ylabel("alpha");
+            if obj.exp.save_plot
+                savefigpath = sprintf("%s/metrics.fig", obj.output_folder);
+                savefig(savefigpath); 
+            end 
         end 
         
         function plot_planners(obj)
@@ -228,7 +298,7 @@ classdef PlannerBlender < handle
             obj.objective_str = sprintf('%s\n%s\n%s\n%s', ajs, adgs, ash, adot); 
             annotation('textbox',[.7 .90 1 .0], 'String', obj.objective_str,'FitBoxToText','on', 'Interpreter', 'None');
             if obj.exp.save_plot
-                savefigpath = sprintf("%s/plot.fig", obj.output_folder);
+                savefigpath = sprintf("%s/planners.fig", obj.output_folder);
                 savefig(savefigpath); 
             end 
         end 

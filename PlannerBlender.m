@@ -150,10 +150,20 @@ classdef PlannerBlender < handle
                    obj.spline_planner.set_spline_planning_points(obj.num_waypts, obj.horizon);
                    obj.spline_planner.plan(obj.state(1:4));
                 end 
-                u1 = obj.spline_planner.get_next_control();
-                u2 = obj.brs_planner.get_avoid_u(obj.state(1:3))';
+                u1 = obj.brs_planner.get_avoid_u(obj.state(1:3))';
+                u2 = obj.spline_planner.get_next_control();
                 v = obj.brs_planner.get_value(obj.state(1:3));
-                alpha = obj.sigmoid(v); 
+                if isequal(obj.blending.blend_function, 'reg_sig') 
+                    alpha = obj.reg_sig(v); 
+                elseif isequal(obj.blending.blend_function, 'shift_sig') 
+                    alpha = obj.shift_sig(v);
+                elseif isequal(obj.blending.blend_function, 'sub') 
+                    alpha = obj.sub_func(v);
+                else
+                    warn("Improper blend function selection"); 
+                    return;
+                end 
+                assert(0 <= alpha && alpha <= 1);
                 u = alpha * u1 + (1 - alpha) * u2;
                 obj.blend_traj(:, i) = [obj.dynSys.x', u, alpha]'; % old state and new control
                 obj.dynSys.updateState(u, obj.dt, obj.dynSys.x); 
@@ -161,15 +171,21 @@ classdef PlannerBlender < handle
                 replan_time = replan_time + obj.dt;
                 if obj.exp.plot_every_iter 
                     obj.plot_planners()
-                    obj.plot_metrics()
                 end 
             end 
         end 
         
-        function [prob] = sigmoid(obj, x)
-            prob = 1 / (1 + exp(-x/obj.blending.temperature));
+        function [prob] = reg_sig(obj, x)
+            prob = 1 / (1 + exp(x/obj.blending.temperature));
         end 
        
+        function [prob] = shift_sig(obj, x)
+            prob = min(2 / (1 + exp(x/obj.blending.temperature)), 1);
+        end 
+       
+        function [prob] = sub_func(obj, x)
+            prob = max(min(1, 1-(x/obj.blending.temperature)), 0);
+        end 
         
         function plot_metrics(obj)
             figure(10);

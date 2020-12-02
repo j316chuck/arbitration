@@ -1,4 +1,4 @@
-function test_default_hyperparams()
+function test_blender()
     close all;
     params = default_hyperparams();
     exp = load_exp(params);

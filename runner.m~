@@ -1,0 +1,15 @@
+function runner()
+    close all;
+    params = default_hyperparams();
+    for temperature = [0.25]
+        for replan_dt = [1.5, 0.5]
+            params.temperature = temperature;
+            params.replan_dt = replan_dt;
+            params.shift_sig = true;
+            params.hyperparam_str = sprintf("replan_dt_%.3f_shifted_sig_temp_%.3f", params.replan_dt, params.temperature); 
+            exp = load_exp(params);
+            pb = PlannerBlender(exp); 
+            pb.blend_planners(); 
+        end 
+    end 
+end 
