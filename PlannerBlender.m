@@ -282,8 +282,9 @@ classdef PlannerBlender < handle
             obj.scores.calc_dist_to_opt_traj(blend_xs, blend_ys, reach_avoid_xs, reach_avoid_ys)
             obj.scores.calc_safety_score(blend_xs, blend_ys, blend_ths, obj.brs_planner); 
             % figure parameters
-            xlim([0, 5]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
-            ylim([0, 5]); %ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
+            gap = 2.5;
+            xlim([min(blend_xs(:)) - gap, max(blend_xs(:)) + gap]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
+            ylim([min(blend_ys(:)) - gap, max(blend_ys(:)) + gap]); %ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
             view(0, 90)
             set(gcf, 'color', 'white')
             set(gcf, 'position', [0, 0, 800, 800])

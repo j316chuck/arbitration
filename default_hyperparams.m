@@ -24,10 +24,10 @@ function [params] = default_hyperparams()
     params.zero_level_set = 0.1;
     params.alpha = 0.75;
     params.temperature = 1;
-    params.blend_function = 'sig';
+    params.blend_function = 'reg_sig';
     %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_levelset_%.3f", params.replan_dt, params.zero_level_set); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
-    params.hyperparam_str = sprintf("replan_dt_%.3f_sig_temp_%.3f", params.replan_dt, params.temperature); 
+    params.hyperparam_str = sprintf("replan_dt_%.3f_%s_temp_%.3f", params.replan_dt, params.blend_function, params.temperature); 
 
     % file path params
     params.clear_dir = false; 
