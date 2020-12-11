@@ -1,7 +1,7 @@
 function runner()
     close all;
     sigmoids = {'reg_sig'; 'sub'; 'shift_sig'};
-    starts = {[3; -2; -pi; 0.01], [-3; 2; -pi; 0.01], [-8; -9.5; 0; 0.01], [1; 1; 0; 0.01]};
+    starts = {[3; -2; 0; 0.01], [-3; 2; -pi; 0.01], [-8; -9.5; 0; 0.01], [1; 1; 0; 0.01]};
     goals = {[3; -4; -pi/2; 0.01], [-4; -1; -pi/2; 0.01], [-5; -8; 0; 0.01], [3, 2.75, pi/2, 0.01]};
     % bad starts: [-4; -3.5; pi/2; 0.01], 
     % bad goals: [-4; -1; -pi/2; 0.01], 
@@ -84,7 +84,7 @@ function runner()
     
     for zero_level_set = [0, 0.1, 0.25, 0.5, 1, 2]
         for replan_dt = [0.5, 1.0, 1.5, 2.5, 5]
-            for li = 2:4
+            for li = 1:4
                 try 
                     tStart = tic;
                     params = default_hyperparams();
