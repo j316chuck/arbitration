@@ -20,12 +20,12 @@ function [params] = default_hyperparams()
     params.horizon = 5;
     % blending params
     params.blending_scheme = 'distance';
-    params.replan_dt = 1.5;
+    params.replan_dt = 1.0;
     params.zero_level_set = 0.2;
     params.alpha = 0.8;
-    params.temperature = 0.1;
+    params.temperature = 2.0;
     params.blend_function_name = 'reg_sig'; %'sub'
-    params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
+    params.blend_function = @(v) max(min(1, 1-(v/params.temperature)), 0)
     %params.blend_function = @(v) max(min(1, 1-(v/params.temperature)), 0);
     %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f", params.replan_dt, params.zero_level_set); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 

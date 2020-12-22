@@ -20,14 +20,14 @@ classdef Planner < handle
         reach_avoid_planner
         brs_planner
         spline_planner
+        dynSys
         exp_name
         output_folder
-        dynSys
+        plot_level
         orig_traj
         blend_traj
         objective_str 
         scores
-        plot_level
     end
     
     methods
@@ -41,7 +41,7 @@ classdef Planner < handle
             obj.max_num_planning_pts = exp.max_num_planning_pts;
             obj.stop_on_collision = exp.stop_on_collision;
             obj.cur_timestamp = 1;
-            obj.state = [obj.start(1:4); 0];
+            obj.state = [obj.start(1:4)', 0];
             obj.blending = exp.blending;
             obj.dt = exp.dt; 
             obj.replan_time_counter = obj.blending.replan_dt; %start of with a replan
@@ -50,12 +50,14 @@ classdef Planner < handle
             obj.reach_avoid_planner = exp.reach_avoid_planner;
             obj.brs_planner = exp.brs_planner;
             obj.spline_planner = exp.spline_planner;
-            obj.orig_traj = [];
+            obj.dynSys = obj.spline_planner.dynSys;
             start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
             goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 
             obj.exp_name = sprintf("%s_map_%s_%s_blending_scheme_%s_%s", exp.map_basename, start_str, goal_str, exp.blending.scheme, exp.hyperparam_str); 
             obj.output_folder = sprintf("outputs/%s", obj.exp_name); 
             obj.plot_level = obj.exp.plot_level;
+            obj.orig_traj = zeros(0,5);
+            obj.blend_traj = [];
             
             if exp.clear_dir && exist(obj.output_folder, 'dir')
                 rmdir(obj.output_folder, 's');
@@ -93,62 +95,69 @@ classdef Planner < handle
             is_goal = dist <= obj.stop_goal_dx; 
         end 
         
-        function d = l2_dist(x1, x2, y1, y2)
-            d =  ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
+        function is_max_timestamps = reached_max_timestamps(obj)
+            is_max_timestamps = obj.cur_timestamp >= obj.max_num_planning_pts;
         end 
         
-        function verbose_plot(threshold)
+        function d = l2_dist(obj, x1, x2, y1, y2)
+            d = ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
+        end 
+        
+        function verbose_plot(obj, threshold)
             if obj.plot_level >= threshold
                 obj.plot_planners();
-                obj.plot_metrics();
+                %obj.plot_metrics();
             end 
         end 
         
         function blend_mpc_planning(obj) 
-            while obj.cur_timestamp < obj.max_num_planning_pts
+            obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
+            while 1 
+               % finish mpc trajectory condition
+               if obj.reached_max_timestamps() || obj.reached_goal() || obj.collided_with_obstacle()
+                  obj.verbose_plot(1);
+                  return;
+               end 
+               % replan condition
                if obj.replan_time_counter >= obj.blending.replan_dt
                   obj.replan_time_counter = 0;
-                  plan = obj.spline_planner.plan(obj.state);
-                  next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
-                  obj.orig_traj = [obj.orig_traj, next_orig_traj];
-                  obj.verbose_plot(2);
+                  switched_to_safety = false; 
+                  plan = obj.spline_planner.plan(obj.state); 
+                  if ~isempty(plan)
+                      next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
+                      obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
+                  end %TODO add if condition for not enough steps in orig_traj
                end 
-               switched_to_safety = false; 
-               for i = 1:obj.num_waypts
-                   x = obj.state(1:3);
-                   v = obj.brs_planner.get_value(x);
-                   u1 = [obj.orig_traj(4, obj.cur_timestamp), obj.orig_traj(5, obj.cur_timestamp)];
-                   u2 = obj.brs_planner.get_avoid_u(x)';
-                   if isequal(obj.blending.scheme, 'switch')
-                       if switched_to_safety || obj.is_unsafe_state(v)
-                           switched_to_safety = true; 
-                           alpha = 0;
-                       else 
-                           alpha = 1;
-                       end 
-                   elseif isequal(obj.blending.scheme, 'constant') 
-                       alpha = obj.blending.alpha;
-                   elseif isequal(obj.blending.scheme, 'distance')
-                       alpha = obj.blending.blend_function(v); 
-                   else
-                       warn("blending scheme not supported");  
-                       return
-                   end
-                   assert(0 <= alpha && alpha <= 1);
-                   u = alpha * u1 + (1 - alpha) * u2;
-                   obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
-                   obj.dynSys.updateState(u, obj.dt, x); 
-                   obj.state = [obj.dynSys.x', u]; % new state and new control
-                   obj.cur_timestamp = obj.cur_timestamp + 1;
-                   obj.replan_time_counter = obj.replan_time_counter + obj.dt;
-                   obj.verbose_plot(3);
-                   if obj.collided_with_obstacle(obj.state) || obj.reached_goal(obj.state)
-                       obj.verbose_plot(1);
-                       return 
+               % get control per timestamp
+               x = reshape(obj.state(1:3), [1, 3]);
+               v = obj.brs_planner.get_value(x);
+               u1 = [obj.orig_traj(4, obj.cur_timestamp), obj.orig_traj(5, obj.cur_timestamp)];
+               u2 = obj.brs_planner.get_avoid_u(x)';
+               if isequal(obj.blending.scheme, 'switch')
+                   if switched_to_safety || obj.is_unsafe_state(v)
+                       switched_to_safety = true; 
+                       alpha = 0;
+                   else 
+                       alpha = 1;
                    end 
-               end 
+               elseif isequal(obj.blending.scheme, 'constant') 
+                   alpha = obj.blending.alpha;
+               elseif isequal(obj.blending.scheme, 'distance')
+                   alpha = obj.blending.blend_function(v); 
+               else
+                   warn("blending scheme not supported");  
+                   return
+               end
+               assert(0 <= alpha && alpha <= 1);
+               u = alpha * u1 + (1 - alpha) * u2;
+               % update state
+               obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+               obj.dynSys.updateState(u, obj.dt, x'); 
+               obj.state = [obj.dynSys.x', u]; % new state and new control
+               obj.cur_timestamp = obj.cur_timestamp + 1;
+               obj.replan_time_counter = obj.replan_time_counter + obj.dt;
+               obj.verbose_plot(3);
             end 
-            obj.verbose_plot(1);
         end
         
         function plot_metrics(obj)

@@ -38,7 +38,7 @@ classdef SplinePlanner < handle
             obj.gmax = grid_2d.max';
             obj.gnum = grid_2d.N';
             obj.gdisc = (obj.gmax - obj.gmin) ./ (obj.gnum - 1);
-            [X2D,Y2D] = meshgrid(obj.gmin(1):obj.gdisc(1):obj.gmax(1), ...
+            [X2D, Y2D] = meshgrid(obj.gmin(1):obj.gdisc(1):obj.gmax(1), ...
                 obj.gmin(2):obj.gdisc(2):obj.gmax(2));
             obj.disc_2d = [X2D(:), Y2D(:)];
         end
