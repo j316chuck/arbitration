@@ -118,8 +118,7 @@ function [exp] = load_exp(params)
     exp.blending.alpha = params.alpha;
     exp.blending.temperature = params.temperature;
     exp.blending.blend_function_name = params.blend_function_name;
-    exp.blending.blend_function = params.blend_function; 
-    
+    ex
     %% Experiment Params
     exp.hyperparam_str = params.hyperparam_str;
     exp.clear_dir = params.clear_dir; 

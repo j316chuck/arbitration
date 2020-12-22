@@ -1,14 +1,20 @@
 
-classdef PlannerBlender < handle
-    %BLENDPLANNER Summary of this class goes here
+classdef Planner < handle
+    %PLANNER Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
         exp 
         start 
         goal
+        stop_goal_dx
+        max_num_planning_pts
+        stop_on_collision
+        cur_timestamp
+        state
         blending
         dt
+        replan_time_counter
         num_waypts
         horizon
         reach_avoid_planner
@@ -16,41 +22,48 @@ classdef PlannerBlender < handle
         spline_planner
         exp_name
         output_folder
-        state
         dynSys
-        initial_traj
+        orig_traj
         blend_traj
         objective_str 
         scores
+        plot_level
     end
     
     methods
-        function obj = PlannerBlender(exp)
-            %BLENDPLANNER Construct an instance of this class
+        function obj = Planner(exp)
+            % Planner Construct an instance of this class
             %   Detailed explanation goes here
             obj.exp = exp; 
             obj.start = exp.start;
             obj.goal = exp.goal;
+            obj.stop_goal_dx = exp.stop_goal_dx;
+            obj.max_num_planning_pts = exp.max_num_planning_pts;
+            obj.stop_on_collision = exp.stop_on_collision;
+            obj.cur_timestamp = 1;
+            obj.state = [obj.start(1:4); 0];
+            obj.blending = exp.blending;
             obj.dt = exp.dt; 
+            obj.replan_time_counter = obj.blending.replan_dt; %start of with a replan
             obj.num_waypts = exp.num_waypts;
             obj.horizon = exp.horizon;
-            obj.blending = exp.blending;
             obj.reach_avoid_planner = exp.reach_avoid_planner;
             obj.brs_planner = exp.brs_planner;
             obj.spline_planner = exp.spline_planner;
+            obj.orig_traj = [];
             start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
             goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 
             obj.exp_name = sprintf("%s_map_%s_%s_blending_scheme_%s_%s", exp.map_basename, start_str, goal_str, exp.blending.scheme, exp.hyperparam_str); 
             obj.output_folder = sprintf("outputs/%s", obj.exp_name); 
+            obj.plot_level = obj.exp.plot_level;
+            
             if exp.clear_dir && exist(obj.output_folder, 'dir')
                 rmdir(obj.output_folder, 's');
             end 
             if ~exist(obj.output_folder, 'dir')
                 mkdir(obj.output_folder); 
             end 
-            
             if exp.run_planner 
-                obj.initial_traj = obj.spline_planner.plan(exp.start);
                 obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
             elseif exp.load_planner
@@ -60,133 +73,86 @@ classdef PlannerBlender < handle
                 warn("Planners not initialized"); 
                 return
             end 
-            
             if exp.save_planner
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
                 save(save_planner_file, 'obj');
             end 
         end
         
-        function blend_planners(obj)
-            if isequal(obj.blending.scheme, 'switch')
-                obj.switch_blend()
-            elseif isequal(obj.blending.scheme, 'constant') 
-                obj.constant_blend()
-            elseif isequal(obj.blending.scheme, 'distance')
-                obj.distance_blend()
-            else
-                warn("blending scheme not supported");  
-                return
-            end
-            obj.plot_planners();
-            obj.plot_metrics();
+        function is_unsafe = is_unsafe_state(obj, value)
+            is_unsafe = (value <= obj.blending.zero_level_set);
         end 
         
-        function switch_blend(obj)
-            obj.dynSys = obj.exp.splineDynSys;
-            obj.dynSys.x = obj.start(1:3);
-            obj.state = [obj.start(1:3)', 0.01, 0]; %v = 0.01, w = 0;
-            obj.blend_traj = zeros(6, 0); 
-            use_avoid_control = 1;
-            replan_time = 0;
-            for i = 1:obj.num_waypts
-                if obj.brs_planner.get_value(obj.state(1:3)) <= obj.blending.zero_level_set
-                    u = obj.brs_planner.get_avoid_u(obj.state(1:3))';
-                    use_avoid_control = 1;
-                else 
-                    if replan_time >= obj.blending.replan_dt || use_avoid_control
-                       replan_time = replan_time - obj.blending.replan_dt;
-                       obj.spline_planner.set_spline_planning_points(obj.num_waypts, obj.horizon);
-                       obj.spline_planner.plan(obj.state(1:4));
-                    end 
-                    u = obj.spline_planner.get_next_control();
-                    use_avoid_control = 0; 
-                end
-                obj.blend_traj(:, i) = [obj.dynSys.x', u, use_avoid_control]'; % old state and new control
-                obj.dynSys.updateState(u, obj.dt, obj.dynSys.x); 
-                obj.state = [obj.dynSys.x', u]; % new state and new control
-                replan_time = replan_time + obj.dt;
-                if obj.exp.plot_every_iter 
-                    obj.plot_planners()
-                end 
+        function is_collision = collided_with_obstacle(obj)
+            u = eval_u(obj.exp.grid_2d, obj.exp.binary_occ_map, obj.state(1:2));
+            is_collision = u >= 0;
+        end 
+        
+        function is_goal = reached_goal(obj)
+            dist = obj.l2_dist(obj.state(1), obj.goal(1), obj.state(2), obj.goal(2));
+            is_goal = dist <= obj.stop_goal_dx; 
+        end 
+        
+        function d = l2_dist(x1, x2, y1, y2)
+            d =  ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
+        end 
+        
+        function verbose_plot(threshold)
+            if obj.plot_level >= threshold
+                obj.plot_planners();
+                obj.plot_metrics();
             end 
         end 
         
-        function constant_blend(obj)
-            obj.dynSys = obj.exp.splineDynSys;
-            obj.dynSys.x = obj.start(1:3);
-            obj.state = [obj.start(1:3)', 0.01, 0]; %v = 0.01, w = 0;
-            obj.blend_traj = zeros(6, 0); 
-            replan_time = 0;
-            for i = 1:obj.num_waypts
-                if replan_time >= obj.blending.replan_dt
-                   replan_time = replan_time - obj.blending.replan_dt;
-                   obj.spline_planner.set_spline_planning_points(obj.num_waypts, obj.horizon);
-                   obj.spline_planner.plan(obj.state(1:4));
-                end 
-                u1 = obj.spline_planner.get_next_control();
-                u2 = obj.brs_planner.get_avoid_u(obj.state(1:3))';
-                u = obj.blending.alpha * u1 + (1 - obj.blending.alpha) * u2;
-                obj.blend_traj(:, i) = [obj.dynSys.x', u, obj.blending.alpha]'; % old state and new control
-                obj.dynSys.updateState(u, obj.dt, obj.dynSys.x); 
-                obj.state = [obj.dynSys.x', u]; % new state and new control
-                replan_time = replan_time + obj.dt;
-                if obj.exp.plot_every_iter 
-                    obj.plot_planners()
-                end 
+        function blend_mpc_planning(obj) 
+            while obj.cur_timestamp < obj.max_num_planning_pts
+               if obj.replan_time_counter >= obj.blending.replan_dt
+                  obj.replan_time_counter = 0;
+                  plan = obj.spline_planner.plan(obj.state);
+                  next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
+                  obj.orig_traj = [obj.orig_traj, next_orig_traj];
+                  obj.verbose_plot(2);
+               end 
+               switched_to_safety = false; 
+               for i = 1:obj.num_waypts
+                   x = obj.state(1:3);
+                   v = obj.brs_planner.get_value(x);
+                   u1 = [obj.orig_traj(4, obj.cur_timestamp), obj.orig_traj(5, obj.cur_timestamp)];
+                   u2 = obj.brs_planner.get_avoid_u(x)';
+                   if isequal(obj.blending.scheme, 'switch')
+                       if switched_to_safety || obj.is_unsafe_state(v)
+                           switched_to_safety = true; 
+                           alpha = 0;
+                       else 
+                           alpha = 1;
+                       end 
+                   elseif isequal(obj.blending.scheme, 'constant') 
+                       alpha = obj.blending.alpha;
+                   elseif isequal(obj.blending.scheme, 'distance')
+                       alpha = obj.blending.blend_function(v); 
+                   else
+                       warn("blending scheme not supported");  
+                       return
+                   end
+                   assert(0 <= alpha && alpha <= 1);
+                   u = alpha * u1 + (1 - alpha) * u2;
+                   obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+                   obj.dynSys.updateState(u, obj.dt, x); 
+                   obj.state = [obj.dynSys.x', u]; % new state and new control
+                   obj.cur_timestamp = obj.cur_timestamp + 1;
+                   obj.replan_time_counter = obj.replan_time_counter + obj.dt;
+                   obj.verbose_plot(3);
+                   if obj.collided_with_obstacle(obj.state) || obj.reached_goal(obj.state)
+                       obj.verbose_plot(1);
+                       return 
+                   end 
+               end 
             end 
-        end 
-        
-        function distance_blend(obj)
-            obj.dynSys = obj.exp.splineDynSys;
-            obj.dynSys.x = obj.start(1:3);
-            obj.state = [obj.start(1:3)', 0.01, 0]; %v = 0.01, w = 0;
-            obj.blend_traj = zeros(6, 0); 
-            replan_time = 0;
-            for i = 1:obj.num_waypts
-                if replan_time >= obj.blending.replan_dt
-                   replan_time = replan_time - obj.blending.replan_dt;
-                   obj.spline_planner.set_spline_planning_points(obj.num_waypts, obj.horizon);
-                   obj.spline_planner.plan(obj.state(1:4));
-                end 
-                u1 = obj.brs_planner.get_avoid_u(obj.state(1:3))';
-                u2 = obj.spline_planner.get_next_control();
-                v = obj.brs_planner.get_value(obj.state(1:3));
-                if isequal(obj.blending.blend_function, 'reg_sig') 
-                    alpha = obj.reg_sig(v); 
-                elseif isequal(obj.blending.blend_function, 'shift_sig') 
-                    alpha = obj.shift_sig(v);
-                elseif isequal(obj.blending.blend_function, 'sub') 
-                    alpha = obj.sub_func(v);
-                else
-                    warn("Improper blend function selection"); 
-                    return;
-                end 
-                assert(0 <= alpha && alpha <= 1);
-                u = alpha * u1 + (1 - alpha) * u2;
-                obj.blend_traj(:, i) = [obj.dynSys.x', u, alpha]'; % old state and new control
-                obj.dynSys.updateState(u, obj.dt, obj.dynSys.x); 
-                obj.state = [obj.dynSys.x', u]; % new state and new control
-                replan_time = replan_time + obj.dt;
-                if obj.exp.plot_every_iter 
-                    obj.plot_planners()
-                end 
-            end 
-        end 
-        
-        function [prob] = reg_sig(obj, x)
-            prob = 1 / (1 + exp(x/obj.blending.temperature));
-        end 
-       
-        function [prob] = shift_sig(obj, x)
-            prob = min(2 / (1 + exp(x/obj.blending.temperature)), 1);
-        end 
-       
-        function [prob] = sub_func(obj, x)
-            prob = max(min(1, 1-(x/obj.blending.temperature)), 0);
-        end 
+            obj.verbose_plot(1);
+        end
         
         function plot_metrics(obj)
+            obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
             figure(10);
             clf;
             hold on 
@@ -194,42 +160,42 @@ classdef PlannerBlender < handle
             subplot(4, 2, 1); 
             plot(1:length(obj.scores.vel), obj.scores.vel, 'bo--');
             title("Linear Velocity");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("mps"); 
             subplot(4, 2, 2); 
             plot(1:length(obj.blend_traj(5, :)), obj.blend_traj(5, :), 'bo--');
             title("Angular Velocity");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("mps"); 
             subplot(4, 2, 3); 
             plot(1:length(obj.scores.accel), obj.scores.accel, 'bo--');
             title("Linear Accel");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("mps"); 
             subplot(4, 2, 4); 
             plot(1:length(obj.scores.jerk), obj.scores.jerk, 'bo--');
             title("Linear Jerk");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("mps"); 
             subplot(4, 2, 5); 
             plot(1:length(obj.scores.safety_score), obj.scores.safety_score, 'bo--');
             title("Safety Score");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("brs value function"); 
             subplot(4, 2, 6); 
             plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
             title("Dist to Opt Traj");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("meters"); 
             subplot(4, 2, 7); 
             plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
             title("Dist to Goal");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("meters"); 
             subplot(4, 2, 8); 
             plot(1:length(obj.blend_traj(6, :)), obj.blend_traj(6, :), 'bo--');
             title("Blend Probability");
-            xlabel("way point");
+            xlabel("iteration");
             ylabel("alpha");
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/metrics.fig", obj.output_folder);
@@ -252,16 +218,10 @@ classdef PlannerBlender < handle
             [~, vf_slice] = proj(obj.exp.grid_3d, obj.brs_planner.valueFun, [0 0 1], obj.state(3));
             contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, vf_slice, 'DisplayName', name, 'color', '#CC1FCB');
             % plot mpc spline traj
-            opt_cur_spline = obj.spline_planner.opt_spline;
-            mpc_spline_xs = opt_cur_spline{1}; 
-            mpc_spline_ys = opt_cur_spline{2}; 
-            mpc_spline_ths = opt_cur_spline{3}; 
+            mpc_spline_xs = obj.orig_traj(1, :); 
+            mpc_spline_ys = obj.orig_traj(2, :); 
+            mpc_spline_ths = obj.orig_traj(3, :); 
             obj.plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'mpc spline');    
-            % plot original spline traj
-            orig_spline_xs = obj.initial_traj{1};
-            orig_spline_ys = obj.initial_traj{2};
-            orig_spline_ths = obj.initial_traj{3};
-            obj.plot_traj(orig_spline_xs, orig_spline_ys, orig_spline_ths, 'cyan', 'orig spline');
             % plot blending traj
             blend_xs = obj.blend_traj(1, :); 
             blend_ys = obj.blend_traj(2, :); 
@@ -273,13 +233,9 @@ classdef PlannerBlender < handle
             reach_avoid_xs = obj.reach_avoid_planner.opt_traj(1, :);
             reach_avoid_ys = obj.reach_avoid_planner.opt_traj(2, :);
             reach_avoid_ths = obj.reach_avoid_planner.opt_traj(3, :);
-            %obj.plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
-
-            obj.scores = objectives();
-            obj.scores.calc_kinematics(blend_xs, blend_ys, obj.dt); 
-            obj.scores.calc_dist_to_goal(blend_xs, blend_ys, obj.goal); 
-            obj.scores.calc_dist_to_opt_traj(blend_xs, blend_ys, reach_avoid_xs, reach_avoid_ys)
-            obj.scores.calc_safety_score(blend_xs, blend_ys, blend_ths, obj.brs_planner); 
+            obj.plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
+            % calculate scores
+            obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
             % figure parameters
             gap = 2.5;
             xlim([min(blend_xs(:)) - gap, max(blend_xs(:)) + gap]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);

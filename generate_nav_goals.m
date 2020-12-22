@@ -123,7 +123,7 @@ function [sampled_points] = generate_nav_points(params)
     figure(5); 
     hold on 
     set(gcf,'Position',[10 10 1000 800])
-    contour(exp.grid_2d.xs{1}, exp.grid_2d.xs{2}, binary_occ_map, [0 0], 'DisplayName', 'obstacle');
+    contour(exp.grid_2d.xs{1}, exp.grid_2d.xs{2}, exp.binary_occ_map, [0 0], 'DisplayName', 'obstacle');
     % plot points 
     probs = rand(size(sampled_x, 2));
     plot_traj(sampled_x, sampled_y, sampled_t', probs, 'sampled points') 
