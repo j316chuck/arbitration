@@ -72,7 +72,7 @@ classdef Planner < handle
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
                 load(save_planner_file, 'obj'); 
             else 
-                warn("Planners not initialized"); 
+                warning("Planners not initialized"); 
                 return
             end 
             if exp.save_planner
@@ -110,7 +110,7 @@ classdef Planner < handle
             end 
         end 
         
-        function blend_mpc_planning(obj) 
+        function blend_mpc_controls(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
             while 1 
                % finish mpc trajectory condition
@@ -145,7 +145,7 @@ classdef Planner < handle
                elseif isequal(obj.blending.scheme, 'distance')
                    alpha = obj.blending.blend_function(v); 
                else
-                   warn("blending scheme not supported");  
+                   warning("blending scheme not supported");  
                    return
                end
                assert(0 <= alpha && alpha <= 1);
@@ -159,6 +159,53 @@ classdef Planner < handle
                obj.verbose_plot(3);
             end 
         end
+        
+        function blend_mpc_traj(obj) 
+            obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
+            while 1 
+               % finish mpc trajectory condition
+               if obj.reached_max_timestamps() || obj.reached_goal() || obj.collided_with_obstacle()
+                  obj.verbose_plot(1);
+                  return;
+               end 
+               % replan condition
+               if obj.replan_time_counter >= obj.blending.replan_dt
+                  obj.replan_time_counter = 0;
+                  plan = obj.spline_planner.plan(obj.state); 
+                  if ~isempty(plan)
+                      next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
+                      obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
+                      new_plan = obj.spline_planner.replan(obj.state, plan{1}, plan{2}, obj.brs_planner, obj.blending.alpha);
+                      blend_alpha = (ones(length(plan{1}), 1) * obj.blending.alpha)';
+                      next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
+                      obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+                      obj.replan_plot(2); 
+                      obj.verbose_plot(2);
+                  end %TODO add if condition for not enough steps in orig_traj
+               end 
+               % update state
+               x = reshape(obj.state(1:3), [1, 3]);
+               u = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)]; 
+               alpha = obj.blending.alpha;
+               obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+               obj.dynSys.updateState(u, obj.dt, x'); 
+               obj.state = [obj.dynSys.x', u]; % new state and new control
+               obj.cur_timestamp = obj.cur_timestamp + 1;
+               obj.replan_time_counter = obj.replan_time_counter + obj.dt;
+               obj.verbose_plot(3);
+            end 
+        end
+        
+        function replan_plot(obj, verbosity)
+            if obj.plot_level < verbosity 
+                return 
+            end 
+            savefigpath = '';
+            if obj.exp.save_plot
+                savefigpath = sprintf("%s/replan_traj_timestamp_%d.fig", obj.output_folder, obj.cur_timestamp);  
+            end 
+            obj.spline_planner.plot_replan_scores(savefigpath);
+        end 
         
         function plot_metrics(obj)
             obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
@@ -263,7 +310,7 @@ classdef Planner < handle
             obj.objective_str = sprintf('%s\n%s\n%s\n%s', ajs, adgs, ash, adot); 
             annotation('textbox',[.7 .90 1 .0], 'String', obj.objective_str,'FitBoxToText','on', 'Interpreter', 'None');
             if obj.exp.save_plot
-                savefigpath = sprintf("%s/planners.fig", obj.output_folder);
+                savefigpath = sprintf("%s/planners_%d.fig", obj.output_folder, obj.cur_timestamp);
                 savefig(savefigpath); 
             end 
         end 
