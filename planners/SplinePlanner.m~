@@ -129,13 +129,19 @@ classdef SplinePlanner < handle
             end
         end 
         
-        %% Replans a path from the base path
-        function opt_spline = replan_with_safety_controls(obj, start, traj_xs, traj_ys, safe_xs, safe_ys, alpha)
+                %% Replans a path from the base path
+        function opt_spline = replan_With_safety_controls(obj, start, traj_xs, traj_ys, safe_xs, safe_ys, alpha)
             obj.start = start;
             obj.replan_scores = zeros(5, 0);
             
             opt_reward = 100000000000000.0;
-            opt_spline = {};        
+            opt_spline = {};
+            curr_spline = {};
+            
+            % DEBUGGING
+            %figure
+            all_rewards = [];
+            plt_handles = {};
             
             for ti=1:length(obj.disc_2d) 
                 candidate_goal = obj.disc_2d(ti, :);
@@ -164,9 +170,8 @@ classdef SplinePlanner < handle
                 
                 % If current spline is dyamically feasible, check if it is low cost.
                 if (feasible_horizon <= obj.horizon)
-                    spline_xs = curr_spline{1}; spline_ys = curr_spline{2};
-                    safety_cost = sum(obj.l2_dist(spline_xs(:), safe_xs(:), spline_ys(:), safe_ys(:))); 
-                    replan_cost = sum(obj.l2_dist(spline_xs(:), traj_xs(:), spline_ys(:), traj_ys(:))); 
+                    safety_cost = obj.eval_(curr_spline, brs_planner); 
+                    replan_cost = obj.eval_traj_replan_cost(curr_spline, traj_xs, traj_ys); 
                     reward = alpha * replan_cost + (1-alpha) * safety_cost;
                     replan_score = [candidate_goal(1); candidate_goal(2); safety_cost; replan_cost; reward];
                     obj.replan_scores = [obj.replan_scores, replan_score];
@@ -184,10 +189,9 @@ classdef SplinePlanner < handle
             end
         end 
         
-        
         function plot_replan_scores(obj, savefig_path)
             opt_xs = obj.opt_spline{1}; opt_ys = obj.opt_spline{2};
-            sx = opt_xs(1); sy = opt_ys(1); gx = opt_xs(end); gy = opt_ys(end);
+            sx = obj.start(1); sy = obj.start(2); gx = opt_xs(end); gy = opt_ys(end);
             xs = obj.replan_scores(1, :); 
             ys = obj.replan_scores(2, :); 
             safety_cost = reshape(obj.replan_scores(3, :), size(obj.x2d));
@@ -236,7 +240,7 @@ classdef SplinePlanner < handle
             contour(obj.x2d, obj.y2d, obj.binary_occ_map, [0 0]);
             colormap(gca,'jet');
             hcb2 = colorbar;
-            title("Alpha Blend Cost");
+            title("Reward");
             xlabel("x (m)");
             ylabel("y (m)");
             if ~isempty(savefig_path)
@@ -256,7 +260,7 @@ classdef SplinePlanner < handle
         end 
 
         function d = l2_dist(obj, x1, x2, y1, y2)
-            d =  ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
+            d =  (x1 - x2) .^ 2 + (y1 - y2) .^ 2;
         end
 
         function replan_cost = eval_traj_replan_cost(obj, curr_spline, old_xs, old_ys)

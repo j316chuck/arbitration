@@ -16,10 +16,10 @@ function [params] = default_hyperparams()
     params.dMax = [0.1, 0.1];
     params.tau = 0:0.5:10;
     % spline planner
-    params.num_waypts = 15;
-    params.horizon = 1.5;
+    params.num_waypts = 50;
+    params.horizon = 5;
     % blending params
-    params.blending_scheme = 'blend_traj';
+    params.blending_scheme = 'blend_safety_control_traj';
     params.replan_dt = 1.5;
     params.zero_level_set = 0.2;
     params.alpha = 0.2;
@@ -35,7 +35,7 @@ function [params] = default_hyperparams()
 
     % file path params
     params.clear_dir = false; 
-    params.run_planner = true; 
+    params.run_planner = false; 
     params.save_planner = true; 
     params.load_planner = ~params.run_planner;
     params.save_blender = true; 

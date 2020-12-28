@@ -29,7 +29,7 @@ classdef Planner < handle
         blend_traj
         objective_str 
         scores
-        termination_state
+        obj.
     end
     
     methods
@@ -226,19 +226,8 @@ classdef Planner < handle
         end                    
         
         function save_state(obj)
-            if obj.reached_goal() 
-                obj.termination_state = 0;
-            elseif obj.collided_with_obstacle()
-                obj.termination_state = 1;
-            elseif obj.reached_max_timestamps()
-                obj.termination_state = 2;
-            else
-                obj.termination_state = 3;
-            end 
-            save_planner_file = sprintf("%s/final_state.mat", obj.output_folder);
-            save(save_planner_file, 'obj');
+            if 
         end 
-        
         function replan_plot(obj, verbosity)
             if obj.plot_level < verbosity 
                 return 

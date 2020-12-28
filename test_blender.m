@@ -5,4 +5,5 @@ function test_blender()
     pb = Planner(exp);
     %pb.blend_mpc_controls();
     pb.blend_mpc_traj(); 
+    pb.termination_state
 end 
