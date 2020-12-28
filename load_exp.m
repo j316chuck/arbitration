@@ -84,8 +84,8 @@ function [exp] = load_exp(params)
     reachAvoidSchemeData.dMode = 'max';
     exp.reachAvoidSchemeData = reachAvoidSchemeData;
     exp.obstacle = -repmat(exp.obs_map, 1, 1, exp.grid_3d.N(3));
-    hard_code_tau = 0:0.5:35;
-    exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, hard_code_tau); 
+    long_tau = 0:0.5:30;
+    exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, long_tau); 
 
     %% Avoid brs
     xstart = exp.start(1:3);

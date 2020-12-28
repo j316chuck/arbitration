@@ -87,16 +87,16 @@ classdef Planner < handle
         
         function is_collision = collided_with_obstacle(obj)
             u = eval_u(obj.exp.grid_2d, obj.exp.binary_occ_map, obj.state(1:2));
-            is_collision = u >= 0;
+            is_collision = (u >= 0);
         end 
         
         function is_goal = reached_goal(obj)
             dist = obj.l2_dist(obj.state(1), obj.goal(1), obj.state(2), obj.goal(2));
-            is_goal = dist <= obj.stop_goal_dx; 
+            is_goal = (dist <= obj.stop_goal_dx); 
         end 
         
         function is_max_timestamps = reached_max_timestamps(obj)
-            is_max_timestamps = obj.cur_timestamp >= obj.max_num_planning_pts;
+            is_max_timestamps = (obj.cur_timestamp >= obj.max_num_planning_pts);
         end 
         
         function d = l2_dist(obj, x1, x2, y1, y2)
