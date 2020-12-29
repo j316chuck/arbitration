@@ -191,14 +191,15 @@ classdef SplinePlanner < handle
             xs = obj.replan_scores(1, :); 
             ys = obj.replan_scores(2, :); 
             safety_cost = reshape(obj.replan_scores(3, :), size(obj.x2d));
-            replan_cost =reshape(obj.replan_scores(4, :), size(obj.x2d));
+            replan_cost = reshape(obj.replan_scores(4, :), size(obj.x2d));
             reward = reshape(obj.replan_scores(5, :), size(obj.x2d));
             figure(6); 
             clf; 
+            gxs = obj.grid_2d.xs{1}; gys = obj.grid_2d.xs{2};
             set(gcf,'Position', [10 10 800 900])
             subplot(2, 2, 1); 
             hold on 
-            contourf(obj.x2d, obj.y2d, obj.binary_occ_map, [0 0]);
+            contourf(gxs, gys, obj.binary_occ_map, [0 0]);
             scatter(sx, sy, 20, 'go'); 
             scatter(gx, gy, 20, 'rx'); 
             colormap(gca,'gray')
@@ -211,7 +212,7 @@ classdef SplinePlanner < handle
             contourf(obj.x2d, obj.y2d, safety_cost);
             scatter(sx, sy, 20, 'go'); 
             scatter(gx, gy, 20, 'rx');
-            contour(obj.x2d, obj.y2d, obj.binary_occ_map, [0 0]);
+            contour(gxs, gys, obj.binary_occ_map, [0 0]);
             colormap(gca, 'jet');
             hcb2 = colorbar;
             title("Safety Cost");
@@ -222,7 +223,7 @@ classdef SplinePlanner < handle
             contourf(obj.x2d, obj.y2d, replan_cost);
             scatter(sx, sy, 20, 'go'); 
             scatter(gx, gy, 20, 'rx'); 
-            contour(obj.x2d, obj.y2d, obj.binary_occ_map, [0 0]);
+            contour(gxs, gys, obj.binary_occ_map, [0 0]);
             colormap(gca, 'jet');
             hcb2 = colorbar;
             title("Replan Cost");
@@ -233,7 +234,7 @@ classdef SplinePlanner < handle
             contourf(obj.x2d, obj.y2d, reward);
             scatter(sx, sy, 20, 'go'); 
             scatter(gx, gy, 20, 'rx');
-            contour(obj.x2d, obj.y2d, obj.binary_occ_map, [0 0]);
+            contour(gxs, gys, obj.binary_occ_map, [0 0]);
             colormap(gca,'jet');
             hcb2 = colorbar;
             title("Alpha Blend Cost");

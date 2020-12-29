@@ -162,7 +162,7 @@ classdef Planner < handle
             end 
         end
         
-        function result=blend_mpc_traj(obj) 
+        function blend_mpc_traj(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
             while 1 
                % finish mpc trajectory condition
@@ -322,7 +322,7 @@ classdef Planner < handle
             mpc_spline_ths = obj.orig_traj(3, :); 
             obj.plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'mpc spline');    
             % plot safety_traj
-            if ~isempty(obj.safety_traj(1, :))
+            if ~isempty(obj.safety_traj)
                 safety_spline_xs = obj.safety_traj(1, :); 
                 safety_spline_ys = obj.safety_traj(2, :); 
                 safety_spline_ths = obj.safety_traj(3, :); 

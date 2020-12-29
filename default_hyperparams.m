@@ -22,7 +22,7 @@ function [params] = default_hyperparams()
     params.blending_scheme = 'blend_safety_control_traj';
     params.replan_dt = 1.5;
     params.zero_level_set = 0.2;
-    params.alpha = 0.2;
+    params.alpha = 0.5;
     params.temperature = 0.1;
     params.blend_function_name = 'reg_sig'; %'sub'
     params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
@@ -35,7 +35,7 @@ function [params] = default_hyperparams()
 
     % file path params
     params.clear_dir = false; 
-    params.run_planner = false; 
+    params.run_planner = true; 
     params.save_planner = true; 
     params.load_planner = ~params.run_planner;
     params.save_blender = true; 
