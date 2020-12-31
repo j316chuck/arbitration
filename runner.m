@@ -2,11 +2,10 @@ function runner()
     load('./outputs/sampled_goals.mat')
     sample_run_so_break_early = false;
     N = length(goals);
-    for i = 1:10
-        for alpha = [ 0.6, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9, 1.0]
-            for blending_scheme = {'blend_safety_value_traj', 'blend_safety_control_traj'}
-                tic; 
-                try 
+    for i = 1:25
+        for replan_dt = 0.5:1.0:1.5
+            for zls = 0:0.1:0.1
+                tic;
                 close all;
                 g = goals(i, :);
                 s = starts(i, :);
@@ -14,14 +13,39 @@ function runner()
                 params.run_planner = true;
                 params.start = s';
                 params.goal = g';
-                params.alpha = alpha;
-                params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
-                params.blending_scheme = blending_scheme{1};
+                params.zero_level_set = zls;
+                params.replan_dt = replan_dt;
+                params.blending_scheme = 'probabilistic_blend_safety_control_traj';
+                params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_level_set_%.2f", params.replan_dt, params.num_alpha_samples, zls); 
                 exp = load_exp(params);
                 pb = Planner(exp);
                 pb.blend_mpc_traj(); 
                 fprintf("Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n", s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
-                toc; 
+                toc;
+                fprintf("FAILED %s\n", pb.exp_name);
+            end 
+            
+            try 
+                tic;
+                close all;
+                g = goals(i, :);
+                s = starts(i, :);
+                params = default_hyperparams();
+                params.run_planner = true;
+                params.start = s';
+                params.goal = g';
+                alpha = 0.2;
+                params.alpha = alpha;
+                params.replan_dt = replan_dt;
+                params.blending_scheme = 'blend_safety_value_traj';
+                params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
+                exp = load_exp(params);
+                pb = Planner(exp);
+                pb.blend_mpc_traj(); 
+                fprintf("Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n", s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
+                toc;
+            catch 
+                fprintf("FAILED %s\n", pb.exp_name);
             end
         end
     end 

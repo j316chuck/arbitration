@@ -7,8 +7,8 @@ function [params] = default_hyperparams()
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [41; 41; 16];
     % navigation
-    params.start =  [-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
-    params.goal = [3, 2.75, pi/2, 0.01]; %[2, 4, pi/2, 0.01];
+    params.start =  [-4, -1, pi/2]; %[-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
+    params.goal = [4.76, 0.84, 1.26]; %[3, 2.75, pi/2, 0.01]; %[2, 4, pi/2, 0.01];
     params.goal_radius = 0.5;
     % dynsys
     params.wMax = 1;
@@ -19,18 +19,20 @@ function [params] = default_hyperparams()
     params.num_waypts = 50;
     params.horizon = 5;
     % blending params
-    params.blending_scheme = 'blend_safety_control_traj';
+    params.blending_scheme = 'probabilistic_blend_value_traj';
     params.replan_dt = 1.5;
-    params.zero_level_set = 0.2;
-    params.alpha = 0.5;
+    params.zero_level_set = 0;
+    params.alpha = 1.5;
     params.temperature = 0.1;
     params.blend_function_name = 'reg_sig'; %'sub'
     params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
+    params.num_alpha_samples = 10; 
     %params.blend_function = @(v) max(min(1, 1-(v/params.temperature)), 0);
     %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f", params.replan_dt, params.zero_level_set); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_%s_temp_%.3f", params.replan_dt, params.blend_function_name, params.temperature); 
-    params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
+    %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
+    params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_level_set_%.2f", params.replan_dt, params.num_alpha_samples, params.zero_level_set); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f", params.replan_dt, params.zero_level_set); 
 
     % file path params

@@ -55,7 +55,7 @@ function [exp] = load_exp(params)
     exp.goal = params.goal;
     exp.goal_radius = params.goal_radius;
     exp.stop_goal_dx = 0.25;
-    exp.max_num_planning_pts = 1000;
+    exp.max_num_planning_pts = 300;
     exp.stop_on_collision = true;
     exp.goal_map_2d = shapeCylinder(exp.grid_2d, 3, exp.goal(1:2), exp.goal_radius);
     exp.goal_map_3d = shapeCylinder(exp.grid_3d, 3, exp.goal(1:3), exp.goal_radius); 
@@ -118,6 +118,7 @@ function [exp] = load_exp(params)
     exp.blending.zero_level_set = params.zero_level_set;
     exp.blending.alpha = params.alpha;
     exp.blending.temperature = params.temperature;
+    exp.blending.num_alpha_samples = params.num_alpha_samples;
     exp.blending.blend_function_name = params.blend_function_name;
     exp.blending.blend_function = params.blend_function; 
     
