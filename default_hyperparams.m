@@ -7,7 +7,7 @@ function [params] = default_hyperparams()
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [41; 41; 16];
     % navigation
-    params.start =  [-4; -1; pi/2; 0.01]; %[-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
+    params.start = [4.56; 3.95; -pi/10; 0.01]; %[-4; -1; pi/2; 0.01]; %[-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
     params.goal = [4.76; 0.84; 1.26; 0.01]; %[3, 2.75, pi/2, 0.01]; %[2, 4, pi/2, 0.01];
     params.goal_radius = 0.5;
     % dynsys
@@ -21,8 +21,8 @@ function [params] = default_hyperparams()
     % blending params
     params.blending_scheme = 'probabilistic_blend_safety_value_traj';
     params.replan_dt = 1.5;
-    params.zero_level_set = 0.0;
-    params.alpha = 1.5;
+    params.zero_level_set = 0.03;
+    params.alpha = 0.2;
     params.temperature = 0.1;
     params.blend_function_name = 'reg_sig'; %'sub'
     params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
@@ -39,7 +39,7 @@ function [params] = default_hyperparams()
     params.clear_dir = false; 
     params.run_planner = true; 
     params.save_planner = true; 
-    params.load_planner = ~params.run_planner;
+    params.load_planner = true;
     params.save_blender = true; 
     params.save_plot = true; 
     params.plot_level = 2; %every iter, every replan, at the end, not at all
