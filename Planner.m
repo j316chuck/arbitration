@@ -108,7 +108,7 @@ classdef Planner < handle
         function verbose_plot(obj, threshold)
             if obj.plot_level >= threshold
                 obj.plot_planners();
-                %obj.plot_metrics();
+                obj.plot_metrics(); 
             end 
         end 
         
@@ -158,10 +158,25 @@ classdef Planner < handle
                obj.state = [obj.dynSys.x', u]; % new state and new control
                obj.cur_timestamp = obj.cur_timestamp + 1;
                obj.replan_time_counter = obj.replan_time_counter + obj.dt;
-               obj.verbose_plot(3);
             end 
         end
        
+        function new_plan = truncate_plan_with_replan_time(obj, plan)
+            num_steps_per_mpc_replan = ceil(obj.blending.replan_dt / obj.dt); 
+            if iscell(plan)
+                new_plan = {plan{1}(1:num_steps_per_mpc_replan), plan{2}(1:num_steps_per_mpc_replan), plan{3}(1:num_steps_per_mpc_replan), plan{4}(1:num_steps_per_mpc_replan), plan{5}(1:num_steps_per_mpc_replan)};
+            else
+                new_plan = plan(:, 1:num_steps_per_mpc_replan);
+            end 
+        end 
+        
+        function use_safety_traj_in_next_mpc_plan(obj)
+            alpha = -0.1; 
+            new_plan = obj.truncate_plan_with_replan_time(obj.safety_traj); 
+            blend_alpha = (ones(size(new_plan, 2), 1) * alpha)';
+            next_blend_traj = [new_plan; blend_alpha];
+            obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+        end 
         
         function blend_mpc_traj(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
@@ -179,46 +194,58 @@ classdef Planner < handle
                   if ~isempty(plan)
                       next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
+                      next_safety_traj = obj.get_next_safety_traj();
+                      obj.safety_traj = [obj.safety_traj(:, 1:obj.cur_timestamp-1), next_safety_traj];
                       if strcmp(obj.exp.blending.scheme, 'blend_safety_value_traj') 
                           alpha = obj.blending.alpha;
                           new_plan = obj.spline_planner.replan_with_brs_planner(obj.state, plan{1}, plan{2}, obj.brs_planner, alpha);
-                          blend_alpha = (ones(length(plan{1}), 1) * alpha)';
+                          new_plan = obj.truncate_plan_with_replan_time(new_plan);
+                          blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
                       elseif strcmp(obj.exp.blending.scheme, 'blend_safety_control_traj')
                           alpha = obj.blending.alpha;
-                          next_safety_traj = obj.get_next_safety_traj();
-                          obj.safety_traj = [obj.safety_traj(:, 1:obj.cur_timestamp-1), next_safety_traj];
                           new_plan = obj.spline_planner.replan_with_safety_controls(obj.state, plan{1}, plan{2}, next_safety_traj(1, :), next_safety_traj(2, :), alpha);    
-                          blend_alpha = (ones(length(plan{1}), 1) * alpha)';
+                          new_plan = obj.truncate_plan_with_replan_time(new_plan);
+                          blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
                       elseif strcmp(obj.exp.blending.scheme, 'probabilistic_blend_safety_control_traj')
-                          next_safety_traj = obj.get_next_safety_traj();
-                          obj.safety_traj = [obj.safety_traj(:, 1:obj.cur_timestamp-1), next_safety_traj];
-                          alphas = flip([0.0; sort(rand(obj.exp.blending.num_alpha_samples, 1)); 1.0]);
+                          alphas = flip([0; sort(rand(obj.exp.blending.num_alpha_samples, 1)); 1.0]);
+                          blended_traj = false;
                           for i = 1:length(alphas)
                               alpha = alphas(i); 
                               new_plan = obj.spline_planner.replan_with_safety_controls(obj.state, plan{1}, plan{2}, next_safety_traj(1, :), next_safety_traj(2, :), alpha);    
+                              new_plan = obj.truncate_plan_with_replan_time(new_plan);
                               if obj.is_safe_traj(new_plan)
-                                  blend_alpha = (ones(length(plan{1}), 1) * alpha)';
+                                  blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                                   next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                                   obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+                                  blended_traj = true;
                                   break
                               end 
-                          end
-                      elseif strcmp(obj.exp.blending.scheme, 'probabilistic_blend_value_traj')
-                          alphas = flip([0.0; sort(rand(obj.exp.blending.num_alpha_samples, 1)); 1.0]);
+                          end             
+                          if ~blended_traj
+                              obj.use_safety_traj_in_next_mpc_plan(); 
+                          end 
+                      elseif strcmp(obj.exp.blending.scheme, 'probabilistic_blend_safety_value_traj')
+                          alphas = flip([0; sort(rand(obj.exp.blending.num_alpha_samples, 1)); 1.0]);
+                          blended_traj = false;
                           for i = 1:length(alphas)
                               alpha = alphas(i); 
                               new_plan = obj.spline_planner.replan_with_brs_planner(obj.state, plan{1}, plan{2}, obj.brs_planner, alpha);
+                              new_plan = obj.truncate_plan_with_replan_time(new_plan);
                               if obj.is_safe_traj(new_plan)
-                                  blend_alpha = (ones(length(plan{1}), 1) * alpha)';
+                                  blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                                   next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                                   obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+                                  blended_traj = true;
                                   break
                               end
                           end
+                          if ~blended_traj
+                              obj.use_safety_traj_in_next_mpc_plan()
+                          end 
                       end 
                       obj.replan_plot(2);
                       obj.verbose_plot(2);
@@ -227,8 +254,8 @@ classdef Planner < handle
                % update state
                x = reshape(obj.state(1:3), [1, 3]);
                u = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)]; 
-               alpha = obj.blending.alpha;
-               obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+               a = obj.blend_traj(6, obj.cur_timestamp);
+               obj.blend_traj(:, obj.cur_timestamp) = [x, u, a]'; % old state and new control
                obj.dynSys.updateState(u, obj.dt, x'); 
                obj.state = [obj.dynSys.x', u]; % new state and new control
                obj.cur_timestamp = obj.cur_timestamp + 1;
@@ -381,9 +408,6 @@ classdef Planner < handle
             % calculate scores
             obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
             % figure parameters
-            gap = 2.5;
-            xlim([min(blend_xs(:)) - gap, max(blend_xs(:)) + gap]); %xlim([env.grid_2d.min(1),env.grid_2d.max(1)]);
-            ylim([min(blend_ys(:)) - gap, max(blend_ys(:)) + gap]); %ylim([env.grid_2d.min(2),env.grid_2d.max(2)]);
             view(0, 90)
             set(gcf, 'color', 'white')
             set(gcf, 'position', [0, 0, 800, 800])

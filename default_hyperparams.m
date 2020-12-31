@@ -7,8 +7,8 @@ function [params] = default_hyperparams()
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [41; 41; 16];
     % navigation
-    params.start =  [-4, -1, pi/2]; %[-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
-    params.goal = [4.76, 0.84, 1.26]; %[3, 2.75, pi/2, 0.01]; %[2, 4, pi/2, 0.01];
+    params.start =  [-4; -1; pi/2; 0.01]; %[-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
+    params.goal = [4.76; 0.84; 1.26; 0.01]; %[3, 2.75, pi/2, 0.01]; %[2, 4, pi/2, 0.01];
     params.goal_radius = 0.5;
     % dynsys
     params.wMax = 1;
@@ -19,9 +19,9 @@ function [params] = default_hyperparams()
     params.num_waypts = 50;
     params.horizon = 5;
     % blending params
-    params.blending_scheme = 'probabilistic_blend_value_traj';
+    params.blending_scheme = 'probabilistic_blend_safety_value_traj';
     params.replan_dt = 1.5;
-    params.zero_level_set = 0;
+    params.zero_level_set = 0.0;
     params.alpha = 1.5;
     params.temperature = 0.1;
     params.blend_function_name = 'reg_sig'; %'sub'
