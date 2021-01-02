@@ -66,17 +66,24 @@ classdef Planner < handle
             end 
             if ~exist(obj.output_folder, 'dir')
                 mkdir(obj.output_folder); 
-            end 
-            if exp.run_planner 
-                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
+            end
+            
+            if exp.run_brs
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
-            elseif exp.load_planner
+                brs_planner = obj.brs_planner;
+                save('./data/brs_planner.mat', 'brs_planner'); 
+            else
+                load('./data/brs_planner.mat'); 
+                obj.brs_planner = brs_planner;
+            end 
+            
+            if exp.run_planner
+                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
+            else
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
                 load(save_planner_file, 'obj'); 
-            else 
-                warning("Planners not initialized"); 
-                return
             end 
+            
             if exp.save_planner
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
                 save(save_planner_file, 'obj');
@@ -172,12 +179,22 @@ classdef Planner < handle
             end 
         end 
         
-        function use_safety_traj_in_next_mpc_plan(obj)
+        function use_safety_traj_in_next_mpc_plan(obj, next_safety_traj)
             alpha = -0.1; 
-            new_plan = obj.truncate_plan_with_replan_time(obj.safety_traj); 
+            new_plan = obj.truncate_plan_with_replan_time(next_safety_traj); 
             blend_alpha = (ones(size(new_plan, 2), 1) * alpha)';
             next_blend_traj = [new_plan; blend_alpha];
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+        end 
+        
+        function new_x = mod_theta(obj, x)
+            new_x = x;
+            while new_x(3) < obj.exp.grid_3d.min(3) 
+                new_x(3) = new_x(3) + 2 * pi;
+            end 
+            while new_x(3) > obj.exp.grid_3d.max(3)
+                new_x(3) = new_x(3) - 2 * pi;
+            end 
         end 
         
         function blend_mpc_traj(obj) 
@@ -228,7 +245,7 @@ classdef Planner < handle
                               end
                           end
                           if ~blended_traj
-                              obj.use_safety_traj_in_next_mpc_plan()
+                              obj.use_safety_traj_in_next_mpc_plan(next_safety_traj)
                           end 
                       elseif strcmp(obj.exp.blending.scheme, 'probabilistic_blend_safety_control_traj')
                           alphas = flip([0; sort(rand(obj.exp.blending.num_alpha_samples, 1)); 1.0]);
@@ -246,7 +263,7 @@ classdef Planner < handle
                               end 
                           end             
                           if ~blended_traj
-                              obj.use_safety_traj_in_next_mpc_plan(); 
+                              obj.use_safety_traj_in_next_mpc_plan(next_safety_traj); 
                           end 
                       end 
                       obj.replan_plot(2);
@@ -255,6 +272,7 @@ classdef Planner < handle
                end 
                % update state
                x = reshape(obj.state(1:3), [1, 3]);
+               x = obj.mod_theta(x); 
                u = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)]; 
                a = obj.blend_traj(6, obj.cur_timestamp);
                obj.blend_traj(:, obj.cur_timestamp) = [x, u, a]'; % old state and new control

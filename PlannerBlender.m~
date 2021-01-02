@@ -51,7 +51,9 @@ classdef PlannerBlender < handle
             
             if exp.run_planner 
                 obj.initial_traj = obj.spline_planner.plan(exp.start);
-                obj.brs_planner.solve_brs_avoid(exp.obstacle);
+                if exp.run_brs
+                
+              obj.brs_planner.solve_brs_avoid(exp.obstacle);
                 obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
             elseif exp.load_planner
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);

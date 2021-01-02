@@ -66,17 +66,24 @@ classdef Planner < handle
             end 
             if ~exist(obj.output_folder, 'dir')
                 mkdir(obj.output_folder); 
-            end 
-            if exp.run_planner 
-                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
+            end
+            
+            if exp.run_brs
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
-            elseif exp.load_planner
+                brs_planner = obj.brs_planner;
+                save('./data/brs_planner.mat', 'brs_planner'); 
+            else
+                load('./data/brs_planner.mat'); 
+                obj.brs_planner = brs_planner;
+            end 
+            
+            if exp.run_planner
+                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
+            else
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
                 load(save_planner_file, 'obj'); 
-            else 
-                warning("Planners not initialized"); 
-                return
             end 
+            
             if exp.save_planner
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
                 save(save_planner_file, 'obj');
@@ -172,12 +179,16 @@ classdef Planner < handle
             end 
         end 
         
-        function use_safety_traj_in_next_mpc_plan(obj)
+        function use_safety_traj_in_next_mpc_plan(obj, next_safety_traj)
             alpha = -0.1; 
-            new_plan = obj.truncate_plan_with_replan_time(obj.safety_traj); 
+            new_plan = obj.truncate_plan_with_replan_time(next_safety_traj); 
             blend_alpha = (ones(size(new_plan, 2), 1) * alpha)';
             next_blend_traj = [new_plan; blend_alpha];
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+        end 
+        
+        function mod_theta(obj, x)
+            %obj.exp.grid_3d.max(
         end 
         
         function blend_mpc_traj(obj) 
@@ -193,7 +204,7 @@ classdef Planner < handle
                if obj.replan_time_counter >= obj.blending.replan_dt
                   obj.replan_time_counter = 0;
                   plan = obj.spline_planner.plan(obj.state); 
-                  if ~isempty(plan)
+                  if isempty(plan)
                       next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
                       next_safety_traj = obj.get_next_safety_traj();
@@ -228,7 +239,7 @@ classdef Planner < handle
                               end
                           end
                           if ~blended_traj
-                              obj.use_safety_traj_in_next_mpc_plan()
+                              obj.use_safety_traj_in_next_mpc_plan(next_safety_traj)
                           end 
                       elseif strcmp(obj.exp.blending.scheme, 'probabilistic_blend_safety_control_traj')
                           alphas = flip([0; sort(rand(obj.exp.blending.num_alpha_samples, 1)); 1.0]);
@@ -246,7 +257,7 @@ classdef Planner < handle
                               end 
                           end             
                           if ~blended_traj
-                              obj.use_safety_traj_in_next_mpc_plan(); 
+                              obj.use_safety_traj_in_next_mpc_plan(next_safety_traj); 
                           end 
                       end 
                       obj.replan_plot(2);
@@ -255,6 +266,7 @@ classdef Planner < handle
                end 
                % update state
                x = reshape(obj.state(1:3), [1, 3]);
+               x = obj.mod_theta(x); 
                u = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)]; 
                a = obj.blend_traj(6, obj.cur_timestamp);
                obj.blend_traj(:, obj.cur_timestamp) = [x, u, a]'; % old state and new control
@@ -317,6 +329,9 @@ classdef Planner < handle
         end 
         
         function plot_metrics(obj)
+            if isempty(obj.blend_traj)
+                return
+            end 
             obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
             figure(10);
             clf;
@@ -410,8 +425,9 @@ classdef Planner < handle
             reach_avoid_ths = obj.reach_avoid_planner.opt_traj(3, :);
             obj.plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
             % calculate scores
-            if ~isempty(obj.
-            obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
+            if ~isempty(obj.blend_traj)
+                obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
+            end 
             % figure parameters
             view(0, 90)
             set(gcf, 'color', 'white')
@@ -421,12 +437,14 @@ classdef Planner < handle
             l = legend('Location', 'NorthWest');
             set(l, 'Interpreter', 'none')
             title(obj.exp_name, 'Interpreter', 'None');
-            ajs = sprintf("avg_jerk: %.5f", obj.scores.avg_jerk);
-            adgs = sprintf("avg_dist_to_goal: %.5f", obj.scores.avg_dist_to_goal); 
-            ash = sprintf("avg_safety_score: %.5f", obj.scores.avg_safety_score); 
-            adot = sprintf("avg_dist_to_opt_traj: %.5f", obj.scores.avg_dist_to_opt_traj); 
-            obj.objective_str = sprintf('%s\n%s\n%s\n%s', ajs, adgs, ash, adot); 
-            annotation('textbox',[.7 .90 1 .0], 'String', obj.objective_str,'FitBoxToText','on', 'Interpreter', 'None');
+            if ~isempty(obj.scores) 
+                ajs = sprintf("avg_jerk: %.5f", obj.scores.avg_jerk);
+                adgs = sprintf("avg_dist_to_goal: %.5f", obj.scores.avg_dist_to_goal); 
+                ash = sprintf("avg_safety_score: %.5f", obj.scores.avg_safety_score); 
+                adot = sprintf("avg_dist_to_opt_traj: %.5f", obj.scores.avg_dist_to_opt_traj); 
+                obj.objective_str = sprintf('%s\n%s\n%s\n%s', ajs, adgs, ash, adot); 
+                annotation('textbox',[.7 .90 1 .0], 'String', obj.objective_str,'FitBoxToText','on', 'Interpreter', 'None');
+            end 
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/planners_%d.fig", obj.output_folder, obj.cur_timestamp);
                 savefig(savefigpath); 
