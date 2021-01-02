@@ -1,5 +1,5 @@
 function runner()
-    load('./outputs/sampled_goals.mat')
+    load('./data/sampled_goals.mat')
     N = length(goals);
     x1 = 0; x2 = 0; x3 = 0; x4 = 0; 
     for i = 1:100
