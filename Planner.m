@@ -181,20 +181,32 @@ classdef Planner < handle
         
         function use_safety_traj_in_next_mpc_plan(obj, next_safety_traj)
             alpha = -0.1; 
-            new_plan = obj.truncate_plan_with_replan_time(next_safety_traj); 
-            blend_alpha = (ones(size(new_plan, 2), 1) * alpha)';
-            next_blend_traj = [new_plan; blend_alpha];
+            blend_alpha = (ones(size(next_safety_traj, 2), 1) * alpha)';
+            next_blend_traj = [next_safety_traj; blend_alpha];
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
         end 
         
-        function new_x = mod_theta(obj, x)
-            new_x = x;
-            while new_x(3) < obj.exp.grid_3d.min(3) 
-                new_x(3) = new_x(3) + 2 * pi;
+                
+        function use_modified_safe_orig_traj_in_next_mpc_plan(obj, orig_safety_traj)
+            original_x = obj.dynSys.x; % copy state 
+            safe_orig_traj = zeros(6, 0);
+            safety_state = obj.state; 
+            used_safety = false;            
+            for i = 1:length(orig_safety_traj)
+              x = reshape(safety_state(1:3), [1, 3]);
+              u = [orig_safety_traj(4, i), orig_safety_traj(5, i)];
+              a = 1;
+              if used_safety || (obj.brs_planner.get_value(x) < obj.blending.zero_level_set)
+                  used_safety = true; 
+                  u = reshape(obj.brs_planner.get_avoid_u(x), [1, 2]);
+                  a = -0.2;
+              end 
+              obj.dynSys.updateState(u, obj.dt, x'); 
+              safe_orig_traj(:, i) = [x, u, a]; %old state new control
+              safety_state = [obj.dynSys.x', u]; % new state and new control
             end 
-            while new_x(3) > obj.exp.grid_3d.max(3)
-                new_x(3) = new_x(3) - 2 * pi;
-            end 
+            obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), safe_orig_traj]; 
+            obj.dynSys.x = original_x; % restore state
         end 
         
         function blend_mpc_traj(obj) 
@@ -218,14 +230,14 @@ classdef Planner < handle
                       if strcmp(obj.exp.blending.scheme, 'blend_safety_value_traj') 
                           alpha = obj.blending.alpha;
                           new_plan = obj.spline_planner.replan_with_brs_planner(obj.state, plan{1}, plan{2}, obj.brs_planner, alpha);
-                          new_plan = obj.truncate_plan_with_replan_time(new_plan);
+                          %new_plan = obj.truncate_plan_with_replan_time(new_plan);
                           blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
                       elseif strcmp(obj.exp.blending.scheme, 'blend_safety_control_traj')
                           alpha = obj.blending.alpha;
                           new_plan = obj.spline_planner.replan_with_safety_controls(obj.state, plan{1}, plan{2}, next_safety_traj(1, :), next_safety_traj(2, :), alpha);    
-                          new_plan = obj.truncate_plan_with_replan_time(new_plan);
+                          %new_plan = obj.truncate_plan_with_replan_time(new_plan);
                           blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
@@ -235,8 +247,8 @@ classdef Planner < handle
                           for i = 1:length(alphas)
                               alpha = alphas(i); 
                               new_plan = obj.spline_planner.replan_with_brs_planner(obj.state, plan{1}, plan{2}, obj.brs_planner, alpha);
-                              new_plan = obj.truncate_plan_with_replan_time(new_plan);
-                              if obj.is_safe_traj(new_plan)
+                              trucated_new_plan = obj.truncate_plan_with_replan_time(new_plan);
+                              if obj.is_safe_traj(trucated_new_plan)
                                   blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                                   next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                                   obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
@@ -245,7 +257,8 @@ classdef Planner < handle
                               end
                           end
                           if ~blended_traj
-                              obj.use_safety_traj_in_next_mpc_plan(next_safety_traj)
+                              obj.use_modified_safe_orig_traj_in_next_mpc_plan(next_orig_traj);
+                              %obj.use_safety_traj_in_next_mpc_plan(next_safety_traj)
                           end 
                       elseif strcmp(obj.exp.blending.scheme, 'probabilistic_blend_safety_control_traj')
                           alphas = flip([0; sort(rand(obj.exp.blending.num_alpha_samples, 1)); 1.0]);
@@ -253,8 +266,8 @@ classdef Planner < handle
                           for i = 1:length(alphas)
                               alpha = alphas(i); 
                               new_plan = obj.spline_planner.replan_with_safety_controls(obj.state, plan{1}, plan{2}, next_safety_traj(1, :), next_safety_traj(2, :), alpha);    
-                              new_plan = obj.truncate_plan_with_replan_time(new_plan);
-                              if obj.is_safe_traj(new_plan)
+                              trucated_new_plan = obj.truncate_plan_with_replan_time(new_plan);
+                              if obj.is_safe_traj(trucated_new_plan)
                                   blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                                   next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                                   obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
@@ -263,7 +276,8 @@ classdef Planner < handle
                               end 
                           end             
                           if ~blended_traj
-                              obj.use_safety_traj_in_next_mpc_plan(next_safety_traj); 
+                              obj.use_modified_safe_orig_traj_in_next_mpc_plan(next_orig_traj);
+                              %obj.use_safety_traj_in_next_mpc_plan(next_safety_traj)
                           end 
                       end 
                       obj.replan_plot(2);
@@ -272,7 +286,6 @@ classdef Planner < handle
                end 
                % update state
                x = reshape(obj.state(1:3), [1, 3]);
-               x = obj.mod_theta(x); 
                u = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)]; 
                a = obj.blend_traj(6, obj.cur_timestamp);
                obj.blend_traj(:, obj.cur_timestamp) = [x, u, a]'; % old state and new control

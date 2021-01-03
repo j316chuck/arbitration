@@ -17,8 +17,6 @@ classdef objectives < handle
     end
     
     methods
-        %function obj = objectives()
-        %end
         function obj = objectives(blend_traj, opt_traj, brs_planner, dt, goal)
             blend_xs = blend_traj(1, :); 
             blend_ys = blend_traj(2, :); 

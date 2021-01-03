@@ -11,7 +11,8 @@ function output_analysis()
                 f = fullfile(s.folder, s.name, 'final_state.mat'); 
                 if isfile(f)
                     load(f); 
-                    result = obj.termination_state + 1; %1-success 2-crashed 3-ran out of time 4-total
+                    %1-success 2-crashed 3-ran out of time 4-total
+                    result = obj.termination_state + 1; 
                     total_index = 4;
                     scores(exp_index, result) =  scores(exp_index, result) + 1;
                     scores(exp_index, total_index) = scores(exp_index, total_index) + 1;
