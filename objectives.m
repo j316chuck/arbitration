@@ -17,7 +17,16 @@ classdef objectives < handle
     end
     
     methods
-        function obj = objectives()
+        function obj = objectives(blend_traj, opt_traj, brs_planner, dt, goal)
+            blend_xs = blend_traj(1, :); 
+            blend_ys = blend_traj(2, :); 
+            blend_ths = blend_traj(3, :);
+            reach_avoid_xs = opt_traj(1, :);
+            reach_avoid_ys = opt_traj(2, :);
+            obj.calc_kinematics(blend_xs, blend_ys, dt)
+            obj.calc_dist_to_goal(blend_xs, blend_ys, goal); 
+            obj.calc_dist_to_opt_traj(blend_xs, blend_ys, reach_avoid_xs, reach_avoid_ys)
+            obj.calc_safety_score(blend_xs, blend_ys, blend_ths, brs_planner); 
         end
         
         function [d] = l2_dist(~, x, y) 

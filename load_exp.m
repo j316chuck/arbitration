@@ -54,6 +54,9 @@ function [exp] = load_exp(params)
     exp.start = params.start;
     exp.goal = params.goal;
     exp.goal_radius = params.goal_radius;
+    exp.stop_goal_dx = 0.5;
+    exp.max_num_planning_pts = 1000;
+    exp.stop_on_collision = true;
     exp.goal_map_2d = shapeCylinder(exp.grid_2d, 3, exp.goal(1:2), exp.goal_radius);
     exp.goal_map_3d = shapeCylinder(exp.grid_3d, 3, exp.goal(1:3), exp.goal_radius); 
   
@@ -81,7 +84,8 @@ function [exp] = load_exp(params)
     reachAvoidSchemeData.dMode = 'max';
     exp.reachAvoidSchemeData = reachAvoidSchemeData;
     exp.obstacle = -repmat(exp.obs_map, 1, 1, exp.grid_3d.N(3));
-    exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, exp.tau); 
+    long_tau = 0:0.5:30;
+    exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, long_tau); 
 
     %% Avoid brs
     xstart = exp.start(1:3);
@@ -104,7 +108,7 @@ function [exp] = load_exp(params)
     dMax = exp.dMax; 
     splineDynSys = Plane(xstart, wMax, vRange, dMax);
     exp.splineDynSys = splineDynSys;
-    exp.spline_planner = SplinePlanner(exp.num_waypts, exp.horizon, exp.grid_2d, exp.splineDynSys);  
+    exp.spline_planner = SplinePlanner(exp.num_waypts, exp.horizon, exp.grid_2d, exp.splineDynSys, exp.binary_occ_map);  
     exp.spline_planner.set_sd_goal(exp.goal, exp.goal_map_2d);
     exp.spline_planner.set_sd_obs(-exp.masked_obs_map); 
     
@@ -114,16 +118,19 @@ function [exp] = load_exp(params)
     exp.blending.zero_level_set = params.zero_level_set;
     exp.blending.alpha = params.alpha;
     exp.blending.temperature = params.temperature;
-    exp.blending.blend_function = params.blend_function;
-
+    exp.blending.num_alpha_samples = params.num_alpha_samples;
+    exp.blending.blend_function_name = params.blend_function_name;
+    exp.blending.blend_function = params.blend_function; 
+    
     %% Experiment Params
     exp.hyperparam_str = params.hyperparam_str;
     exp.clear_dir = params.clear_dir; 
-    exp.run_planner = params.run_planner; 
+    exp.run_planner = params.run_planner;     
+    exp.run_brs = params.run_brs; 
     exp.save_planner = params.save_planner; 
     exp.load_planner = params.load_planner;
     exp.save_blender = params.save_blender; 
     exp.save_plot = params.save_plot; 
-    exp.plot_every_iter = params.plot_every_iter; 
+    exp.plot_level = params.plot_level; 
 end 
 

@@ -1,3 +1,4 @@
+
 classdef PlannerBlender < handle
     %BLENDPLANNER Summary of this class goes here
     %   Detailed explanation goes here
@@ -50,15 +51,16 @@ classdef PlannerBlender < handle
             
             if exp.run_planner 
                 obj.initial_traj = obj.spline_planner.plan(exp.start);
-                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
+                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
             elseif exp.load_planner
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
                 load(save_planner_file, 'obj'); 
             else 
                 warn("Planners not initialized"); 
                 return
-            end 
+            end
+
             
             if exp.save_planner
                 save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
@@ -89,8 +91,6 @@ classdef PlannerBlender < handle
             use_avoid_control = 1;
             replan_time = 0;
             for i = 1:obj.num_waypts
-                %updated_num_waypts = num_waypts - (i - 1); 
-                %updated_horizon = horizon - (dt * (i - 1)); 
                 if obj.brs_planner.get_value(obj.state(1:3)) <= obj.blending.zero_level_set
                     u = obj.brs_planner.get_avoid_u(obj.state(1:3))';
                     use_avoid_control = 1;
