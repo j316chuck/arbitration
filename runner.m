@@ -4,7 +4,7 @@ function runner()
     scores = zeros(2, 4); 
     zlsets = [0.1; 0.2];
     failed = {};
-    for i = 3:20
+    for i = 15:20
         for j = 1:length(zlsets)
               pb.exp_name = 'tmp';
               try

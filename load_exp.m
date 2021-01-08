@@ -82,12 +82,12 @@ function [exp] = load_exp(params)
     reachAvoidSchemeData.grid = grid_3d;
     reachAvoidSchemeData.uMode = 'min';
     reachAvoidSchemeData.dMode = 'max';
+    long_tau = 0:0.5:30;
     exp.reachAvoidSchemeData = reachAvoidSchemeData;
     exp.obstacle = -repmat(exp.obs_map, 1, 1, exp.grid_3d.N(3));
-    long_tau = 0:0.5:30;
     exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, long_tau); 
 
-    %% Avoid brs
+    %% Avoid BRS
     xstart = exp.start(1:3);
     wMax = exp.wMax; 
     vRange = exp.vRange; 
@@ -99,7 +99,7 @@ function [exp] = load_exp(params)
     avoidBrsSchemeData.uMode = 'max';
     avoidBrsSchemeData.dMode = 'min';
     exp.avoidBrsSchemeData = avoidBrsSchemeData; 
-    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, exp.tau); 
+    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, long_tau); 
          
     %% Spline Planner
     xstart = exp.start(1:3);
