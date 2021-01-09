@@ -96,7 +96,7 @@ classdef Planner < handle
         
         function is_collision = collided_with_obstacle(obj)
             u = eval_u(obj.exp.grid_2d, obj.exp.binary_occ_map, obj.state(1:2));
-            is_collision = (u >= 0);
+            is_collision = (u < 0);
         end 
         
         function is_goal = reached_goal(obj)
@@ -118,61 +118,7 @@ classdef Planner < handle
                 obj.plot_metrics(); 
             end 
         end 
-        
-%         
-%         function blend_mpc_controls_replan(obj) 
-%             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
-%             while 1 
-%                % finish mpc trajectory condition
-%                if obj.reached_max_timestamps() || obj.reached_goal() || obj.collided_with_obstacle()
-%                   obj.verbose_plot(1);
-%                   obj.save_state();
-%                   return;
-%                end 
-%                % replan condition
-%                if obj.replan_time_counter >= obj.blending.replan_dt 
-%                   obj.replan_time_counter = 0;
-%                   plan = obj.spline_planner.plan(obj.state); 
-%                   
-%                   if ~isempty(plan)
-%                       next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
-%                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
-%                       old_x = obj.dynSys.x; 
-%                       num_timestamps = obj.replan_dt/obj.dt; 
-%                       for i=1:num_timestamps 
-%                           x = reshape(next_orig_traj(i, 1:3), [1, 3]);
-%                           u = obj.brs_planner.get_avoid_u(x); 
-%                           obj.dynSys.x = x;
-%                           obj.dynSys.updateState(u, obj.dt, x); 
-%                           state = [obj.dynSys.x', u];
-%                           new_plan = obj.spline_planner.plan(obj.state); 
-%                           
-%                       end 
-%                       obj.dynSys.x = old_x;
-%                   end %TODO add if condition for not enough steps in orig_traj
-%                   obj.verbose_plot(2);
-%                end 
-%                % get control per timestamp
-%                x = reshape(obj.state(1:3), [1, 3]);
-%                v = obj.brs_planner.get_value(x);
-%                u1 = [obj.orig_traj(4, obj.cur_timestamp), obj.orig_traj(5, obj.cur_timestamp)];
-%                u2 = obj.brs_planner.get_avoid_u(x)';
-%                if obj.next_traj_safety_scores_decreasing()
-%                    alpha = 0; 
-%                    obj.replan_time_counter = obj.blending.replan_dt;
-%                else 
-%                    alpha = 1; 
-%                end 
-%                assert(0 <= alpha && alpha <= 1);
-%                u = alpha * u1 + (1 - alpha) * u2;
-%                % update state
-%                obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
-%                obj.dynSys.updateState(u, obj.dt, x'); 
-%                obj.state = [obj.dynSys.x', u]; % new state and new control
-%                obj.cur_timestamp = obj.cur_timestamp + 1;
-%                obj.replan_time_counter = obj.replan_time_counter + obj.dt;
-%             end 
-%         end
+       
         
         function blend_mpc_controls(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
@@ -312,6 +258,61 @@ classdef Planner < handle
             end 
         end
        
+        %         
+%         function blend_mpc_controls_replan(obj) 
+%             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
+%             while 1 
+%                % finish mpc trajectory condition
+%                if obj.reached_max_timestamps() || obj.reached_goal() || obj.collided_with_obstacle()
+%                   obj.verbose_plot(1);
+%                   obj.save_state();
+%                   return;
+%                end 
+%                % replan condition
+%                if obj.replan_time_counter >= obj.blending.replan_dt 
+%                   obj.replan_time_counter = 0;
+%                   plan = obj.spline_planner.plan(obj.state); 
+%                   
+%                   if ~isempty(plan)
+%                       next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
+%                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
+%                       old_x = obj.dynSys.x; 
+%                       num_timestamps = obj.replan_dt/obj.dt; 
+%                       for i=1:num_timestamps 
+%                           x = reshape(next_orig_traj(i, 1:3), [1, 3]);
+%                           u = obj.brs_planner.get_avoid_u(x); 
+%                           obj.dynSys.x = x;
+%                           obj.dynSys.updateState(u, obj.dt, x); 
+%                           state = [obj.dynSys.x', u];
+%                           new_plan = obj.spline_planner.plan(obj.state); 
+%                           
+%                       end 
+%                       obj.dynSys.x = old_x;
+%                   end %TODO add if condition for not enough steps in orig_traj
+%                   obj.verbose_plot(2);
+%                end 
+%                % get control per timestamp
+%                x = reshape(obj.state(1:3), [1, 3]);
+%                v = obj.brs_planner.get_value(x);
+%                u1 = [obj.orig_traj(4, obj.cur_timestamp), obj.orig_traj(5, obj.cur_timestamp)];
+%                u2 = obj.brs_planner.get_avoid_u(x)';
+%                if obj.next_traj_safety_scores_decreasing()
+%                    alpha = 0; 
+%                    obj.replan_time_counter = obj.blending.replan_dt;
+%                else 
+%                    alpha = 1; 
+%                end 
+%                assert(0 <= alpha && alpha <= 1);
+%                u = alpha * u1 + (1 - alpha) * u2;
+%                % update state
+%                obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+%                obj.dynSys.updateState(u, obj.dt, x'); 
+%                obj.state = [obj.dynSys.x', u]; % new state and new control
+%                obj.cur_timestamp = obj.cur_timestamp + 1;
+%                obj.replan_time_counter = obj.replan_time_counter + obj.dt;
+%             end 
+%         end
+
         function new_plan = truncate_plan_with_replan_time(obj, plan)
             num_steps_per_mpc_replan = ceil(obj.blending.replan_dt / obj.dt); 
             if iscell(plan)
@@ -341,10 +342,10 @@ classdef Planner < handle
               if used_safety || (obj.brs_planner.get_value(x) < obj.blending.zero_level_set)
                   used_safety = true; 
                   u = reshape(obj.brs_planner.get_avoid_u(x), [1, 2]);
-                  a = -0.2;
+                  a = -0.2; % low alpha to indicate we used safety control
               end 
               obj.dynSys.updateState(u, obj.dt, x'); 
-              safe_orig_traj(:, i) = [x, u, a]; %old state new control
+              safe_orig_traj(:, i) = [x, u, a]; % old state new control
               safety_state = [obj.dynSys.x', u]; % new state and new control
             end 
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), safe_orig_traj]; 

@@ -19,9 +19,9 @@ function [exp] = load_exp(params)
    
     % Define 3D grid
     gmin_3d = params.gmin_3d;  % Lower corner of computation domain
-    gmax_3d = params.gmax_3d;  % Upper corner of computation domain
-    gnum_3d = params.gnum_3d;  % Number of grid points per dimension
-    pdDim = 3;                 % 3rd dimension is periodic
+    gmax_3d = params.gmax_3d;    % Upper corner of computation domain
+    gnum_3d = params.gnum_3d;    % Number of grid points per dimension
+    pdDim = 3;                  % 3rd dimension is periodic
     grid_3d = createGrid(gmin_3d, gmax_3d, gnum_3d, pdDim);
     exp.grid_3d = grid_3d; 
     
@@ -48,7 +48,7 @@ function [exp] = load_exp(params)
     signed_obs_map = compute_fmm_map(grid_2d, binary_occ_map);
     % positive inside obstacle, zero within free space
     masked_obs_map = -signed_obs_map .* (1-occ_map);
-    % fmm map, negative inside obstacle, positive inside free space
+    % fmm 
     exp.obs_map = signed_obs_map;
     exp.masked_obs_map = masked_obs_map;
     % debug obstacle map
@@ -119,7 +119,8 @@ function [exp] = load_exp(params)
     exp.splineDynSys = splineDynSys;
     exp.spline_planner = SplinePlanner(exp.num_waypts, exp.horizon, exp.grid_2d, exp.splineDynSys, exp.binary_occ_map);  
     exp.spline_planner.set_sd_goal(exp.goal, exp.goal_map_2d);
-    exp.spline_planner.set_sd_obs(exp.masked_obs_map, params.spline_obs_weight); 
+    spline_planner_obs_weight_lambda = params.spline_obs_weight; 
+    exp.spline_planner.set_sd_obs(exp.masked_obs_map, spline_planner_obs_weight_lambda); 
     
     %% Blending Scheme
     exp.blending.scheme = params.blending_scheme;
