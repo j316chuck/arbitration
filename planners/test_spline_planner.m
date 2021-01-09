@@ -3,9 +3,10 @@ params = spline_params();
             
 %% Plan!
 % note: need a non-zero starting velocity to avoid singularities in spline
-start = [5, -2.25, pi/2, 0.01]; 
+start = [7, -4, pi/2, 0.01]; 
 params.planner.set_sd_goal(params.goal, params.sd_goal);
-params.planner.set_sd_obs(params.sd_obs);
+spline_obs_weight = 10;
+params.planner.set_sd_obs(params.sd_obs, spline_obs_weight);
 opt_spline = params.planner.plan(start);
             
 %% Plot!
@@ -40,7 +41,7 @@ ylim([-params.max_angular_vel, params.max_angular_vel])
 figure(3)
 clf
 hold on
-
+contourf(params.g2d.xs{1}, params.g2d.xs{2}, params.planner.sd_obs, [0, 3]);
 % Plot the lane boundaries.
 plot([params.gmin(1), -4.5], [0,0], '--y', 'linewidth', 4);
 plot([4.5, params.gmax(1)], [0,0], '--y', 'linewidth', 4);
@@ -50,7 +51,6 @@ plot([0,0], [4.5, params.gmax(2)], '--y', 'linewidth', 4);
 % Plot the EGO CAR's trajectory. 
 robot_colors = [linspace(0.1, 0.9, length(xs))', zeros([length(xs),1]), zeros([length(xs),1])];
 plot_traj(xs, ys, ths, robot_colors);
-
 % Plot obstacles.
 for oi = 1:length(params.obstacles)
     obs_info = params.obstacles{oi};

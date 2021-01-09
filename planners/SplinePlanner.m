@@ -16,6 +16,7 @@ classdef SplinePlanner < handle
         gnum
         gdisc
         disc_2d
+        disc_3d
         sd_obs
         sd_goal
         start
@@ -27,6 +28,9 @@ classdef SplinePlanner < handle
         binary_occ_map
         x2d
         y2d
+        x3d 
+        y3d
+        t3d 
     end
     
     methods
@@ -44,11 +48,13 @@ classdef SplinePlanner < handle
             obj.gmax = grid_2d.max';
             obj.gnum = grid_2d.N';
             obj.gdisc = (obj.gmax - obj.gmin) ./ (obj.gnum - 1);
-            [x2d, y2d] = meshgrid(obj.gmin(1):obj.gdisc(1):obj.gmax(1), ...
-                obj.gmin(2):obj.gdisc(2):obj.gmax(2));
+            [x2d, y2d] = meshgrid(grid_2d.vs{1}, grid_2d.vs{2});
             obj.x2d = x2d;
             obj.y2d = y2d;
             obj.disc_2d = [obj.x2d(:), obj.y2d(:)];
+            obj.t3d = 0:pi/4:(2*pi-0.01);
+            [x3d, y3d, t3d] = meshgrid(grid_2d.vs{1}, grid_2d.vs{2}, obj.t3d); 
+            obj.disc_3d = [x3d(:), y3d(:), t3d(:)];
             obj.binary_occ_map = binary_occ_map; 
         end
         
@@ -58,8 +64,8 @@ classdef SplinePlanner < handle
             obj.sd_goal = sd_goal;
         end
         %% Updates the signed distance to obsatacle.
-        function obj = set_sd_obs(obj, sd_obs)
-            obj.sd_obs = sd_obs;
+        function obj = set_sd_obs(obj, sd_obs, weight)
+            obj.sd_obs = sd_obs * weight;
         end
         
         function obj = set_spline_planning_points(obj, num_waypts, horizon)
@@ -92,7 +98,7 @@ classdef SplinePlanner < handle
                 end
                 
                 % orientation should match with goal final vel ~= 0.
-                candidate_goal = [candidate_goal, obj.goal(3), 0.01]; %[candidate_goal, 0.01];
+                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
                 
                 % Compute spline from start to candidate (x,y) goal.
                 curr_spline = ...
@@ -115,6 +121,7 @@ classdef SplinePlanner < handle
                     reward = alpha * replan_cost + (1-alpha) * safety_cost;
                     replan_score = [candidate_goal(1); candidate_goal(2); safety_cost; replan_cost; reward];
                     obj.replan_scores = [obj.replan_scores, replan_score];
+
                     if (reward < opt_reward)
                         opt_reward = reward;
                         opt_spline = curr_spline;                        
@@ -290,8 +297,8 @@ classdef SplinePlanner < handle
             all_rewards = [];
             plt_handles = {};
             
-            for ti=1:length(obj.disc_2d) 
-                candidate_goal = obj.disc_2d(ti, :);
+            for ti=1:length(obj.disc_3d) 
+                candidate_goal = obj.disc_3d(ti, :);
                 
                 % ignore candidate goals inside obstacles.
                 if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
@@ -299,7 +306,7 @@ classdef SplinePlanner < handle
                 end
                 
                 % orientation should match with goal final vel ~= 0.
-                candidate_goal = [candidate_goal, obj.goal(3), 0.01]; %[candidate_goal, 0.01];
+                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
                 
                 % Compute spline from start to candidate (x,y) goal.
                 curr_spline = ...
@@ -314,18 +321,26 @@ classdef SplinePlanner < handle
                     obj.max_linear_vel, ...
                     obj.max_angular_vel, ...
                     obj.horizon);
-                
+               
                 % If current spline is dyamically feasible, check if it is low cost.
                 if (feasible_horizon <= obj.horizon)
                     reward = obj.eval_reward(curr_spline);
-                    
                     if (reward < opt_reward)
                         opt_reward = reward;
                         opt_spline = curr_spline;
                     end
+                    if abs(candidate_goal(1) + 4.995) <= 0.01 && abs(candidate_goal(2) + 2.685) <= 0.01
+                        fprintf("YEEET\n");
+                    end 
+                    all_rewards = [all_rewards, [candidate_goal(1); candidate_goal(2); reward]];
+                else
+                    if abs(candidate_goal(1) + 4.995) <= 0.01 && abs(candidate_goal(2) + 2.685) <= 0.01
+                        fprintf("NERP %f\n", feasible_horizon);
+                    end 
+                    all_rewards = [all_rewards, [candidate_goal(1); candidate_goal(2); 1000]];
                 end
             end
-            
+            obj.plot_spline_reward(start, all_rewards);
             if isempty(opt_spline)
                 warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
             else
@@ -333,6 +348,33 @@ classdef SplinePlanner < handle
             end 
         end
        
+        function plot_spline_reward(obj, start, all_rewards)
+            figure(3); 
+            clf;
+            set(gcf, 'Position', [100, 100, 1200, 900])
+            Nt = length(obj.t3d); 
+            Nm = ceil(Nt / 3); 
+            for ti = 1:Nt
+                % getting reward at specific theta
+                theta = obj.t3d(ti);
+                ns = prod(obj.grid_2d.N); 
+                si = (ti-1) * ns + 1;
+                ei = ti * ns;
+                rews = all_rewards(3, si:ei); 
+                % plotting the obstacle, start point, and spline rewards
+                subplot(Nm, 3, ti); 
+                hold on; 
+                title(sprintf("theta %f", theta)); 
+                xlabel('x(m)');
+                ylabel('y(m)'); 
+                contourf(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, reshape(rews, obj.grid_2d.N'));
+                hcb1 = colorbar;
+                contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0]);
+                scatter(start(1), start(2), 100, 'rx'); 
+                th = start(3);
+                quiver(start(1), start(2), cos(th), sin(th));
+            end 
+        end
         function u = get_mpc_control(obj)
             if isempty(obj.opt_spline) || length(obj.opt_spline{4}) < 1
                 error("Opt spline not calculated yet"); 
