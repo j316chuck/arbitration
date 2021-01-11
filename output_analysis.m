@@ -7,14 +7,14 @@ function output_analysis()
     % prints out a high level summary of the metrics of each experiment
     
     %% Edit these variables for different experiment types (separated by folder name)
-    path = './outputs/';
+    path = './old_outputs/option_0_baseline/';
     exp_types = {
         'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_10.00', ...
         'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_1.00', ...
         'switch_replan_dt_1.500_zero_level_set_0.100_spline_obs_weight_10.00', ...
         'switch_replan_dt_1.500_zero_level_set_0.100_spline_obs_weight_1.00', ...
     };
-    results_folder = './outputs/exp_0_results/';
+    results_folder = './old_outputs/option_0_baseline/results/';
     if ~exist(results_folder, 'dir')
         mkdir(results_folder); 
     end 
@@ -58,13 +58,13 @@ function output_analysis()
                                 obj.termination_state
                               ];
                     metrics(end+1, :) = metric; 
-%                     debugging failed cases 
-%                     if obj.termination_state == 1
-%                         fprintf("Crashed exp: %s\n", exp_name);  
-%                     end 
-%                     if obj.termination_state == 2
-%                         fprintf("Tle exp: %s\n", exp_name);  
-%                     end 
+                    % debugging failed cases 
+                    if obj.termination_state == 1
+                        fprintf("Crashed exp: %s\n", exp_name);  
+                    end 
+                    if obj.termination_state == 2
+                        fprintf("Tle exp: %s\n", exp_name);  
+                    end 
                 else 
                     metrics(end+1, :) = -ones(7, 1)' * 1; 
                     fprintf("Failed exp: %s\n", exp_name); 

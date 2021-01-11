@@ -510,14 +510,16 @@ classdef Planner < handle
             hold on 
             set(gcf,'Position',[10 10 1000 800])
             % plot environment, goal, and start
-            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, -obj.exp.goal_map_3d(:, :, 1), [0 0], 'DisplayName', 'goal shape', 'color', 'red');
-            contourf(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.obs_map, [0 0], 'DisplayName', 'obstacle');
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0], 'DisplayName', 'binary_obs_map', 'color', 'black');
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.obs_map, [0 0], 'DisplayName', 'occ_fmm_map', 'LineWidth', 1, 'color', 'blue');
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, -obj.exp.goal_map_3d(:, :, 1), [0 0], 'DisplayName', 'goal_shape', 'color', 'red');
             scatter(obj.goal(1), obj.goal(2), 100, 'k', 'x', 'DisplayName', 'goal'); 
             scatter(obj.start(1), obj.start(2), 75, 'b', 'o', 'filled', 'DisplayName', 'start'); 
-            % plot value functions
-            name = sprintf("BRS (theta = %s)", obj.state(3));
+            % plot zero level set value function
+            zls = obj.exp.blending.zero_level_set; 
+            name = sprintf("BRS (theta=%.2f, levelset=%.2f)", obj.state(3), zls);
             [~, vf_slice] = proj(obj.exp.grid_3d, obj.brs_planner.valueFun, [0 0 1], obj.state(3));
-            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, vf_slice, 'DisplayName', name, 'color', '#CC1FCB');
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, vf_slice, [zls, zls], 'DisplayName', name, 'color', '#CC1FCB');
             % plot mpc spline traj
             mpc_spline_xs = obj.orig_traj(1, :); 
             mpc_spline_ys = obj.orig_traj(2, :); 
@@ -529,8 +531,7 @@ classdef Planner < handle
                 safety_spline_ys = obj.safety_traj(2, :); 
                 safety_spline_ths = obj.safety_traj(3, :); 
                 obj.plot_traj(safety_spline_xs, safety_spline_ys, safety_spline_ths, 'magenta', 'safety traj');    
-            end 
-            
+            end
             % plot blending traj
             if ~isempty(obj.blend_traj)
                 blend_xs = obj.blend_traj(1, :); 
@@ -545,7 +546,7 @@ classdef Planner < handle
             reach_avoid_ys = obj.reach_avoid_planner.opt_traj(2, :);
             reach_avoid_ths = obj.reach_avoid_planner.opt_traj(3, :);
             obj.plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
-            % calculate scores
+            % calculate metrics
             if ~isempty(obj.blend_traj)
                 obj.scores = objectives(obj.blend_traj, obj.reach_avoid_planner.opt_traj, obj.brs_planner, obj.dt, obj.goal);
             end 
@@ -558,7 +559,7 @@ classdef Planner < handle
             l = legend('Location', 'NorthWest');
             set(l, 'Interpreter', 'none')
             title(obj.exp_name, 'Interpreter', 'None');
-            % add scores caption
+            % add metrics caption
             if ~isempty(obj.scores) 
                 aljs = sprintf("avg_lin_jerk: %.5f", obj.scores.avg_lin_jerk);
                 aajs = sprintf("avg_ang_jerk: %.5f", obj.scores.avg_ang_jerk);
