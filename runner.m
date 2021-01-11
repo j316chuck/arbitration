@@ -13,7 +13,7 @@ function runner()
                     params = default_hyperparams();
                     params.zero_level_set = zlsets(zli); 
                     params.spline_obs_weight = weights(wi); 
-                    params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); 
+                    params.hyperparam_str = sprintf("replan_dt_%.3f_fine_tuned_spline_planner_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); 
                     s = starts(i, :); 
                     g = goals(i, :); 
                     params.start = s';
@@ -28,7 +28,7 @@ function runner()
                 end
             end 
         end 
-        save('failed_exps.mat');
+        save('runner.mat');
     end
 end
 %               pb.exp_name = 'tmp';

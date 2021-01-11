@@ -53,7 +53,7 @@ classdef SplinePlanner < handle
             obj.x2d = x2d;
             obj.y2d = y2d;
             obj.disc_2d = [obj.x2d(:), obj.y2d(:)];
-            obj.t3d = 0:pi/2:(2*pi-0.01);
+            obj.t3d = 0:pi/8:(2*pi-0.01);
             [x3d, y3d, t3d] = meshgrid(grid_2d.vs{1}, grid_2d.vs{2}, obj.t3d); 
             obj.disc_3d = [x3d(:), y3d(:), t3d(:)];
             obj.binary_occ_map = binary_occ_map; 
