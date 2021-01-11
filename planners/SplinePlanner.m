@@ -399,6 +399,11 @@ classdef SplinePlanner < handle
                 max(feasible_horizon_speed, feasible_horizon_angular_vel);
         end
         
+        %% Evaluates the l2 dist
+        function d = l2_dist(obj, x1, x2, y1, y2)
+            d = ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
+        end
+        
          %% Evaluates the obstacle cost along the trajectory.
         function obs_cost = eval_obstacle_cost(obj, curr_spline)
             xs = curr_spline{1};
@@ -415,16 +420,27 @@ classdef SplinePlanner < handle
             goal_cost = sum(eval_u(obj.grid_2d, obj.sd_goal, traj));
         end 
         
-        %% Evaluates the total reward along the trajectory.
-        function reward = eval_reward(obj, curr_spline)
+        %% Evaluates the total cost along the trajectory.
+        function cost = eval_cost(obj, curr_spline)
             xs = curr_spline{1};
             ys = curr_spline{2};
             traj = [xs', ys'];
             obs_r = eval_u(obj.grid_2d, obj.sd_obs, traj);
             goal_r = eval_u(obj.grid_2d, obj.sd_goal, traj);
          
-            reward = sum(obs_r + goal_r);
+            cost = sum(obs_r + goal_r);
         end     
+        
+        %% Evaluates the safety cost along the trajectory
+        function safety_cost = eval_traj_safety_cost(obj, curr_spline, brs_planner)
+            safety_cost = 0;
+            xs = curr_spline{1}; ys = curr_spline{2}; ths = curr_spline{3}; 
+            for i = 1:length(xs)
+                state = [xs(i), ys(i), ths(i)];
+                cost = brs_planner.get_value(state(1:3));
+                safety_cost = safety_cost + cost;
+            end 
+        end
         
         %% Evaluates the safety cost thresholded by a constant value along the trajectory    
         function safety_cost = eval_traj_threshold_safety_cost(obj, curr_spline, brs_planner)
@@ -437,22 +453,6 @@ classdef SplinePlanner < handle
                 safety_cost = safety_cost + cost;
             end 
         end 
-        
-        %% Evaluates the l2 dist
-        function d = l2_dist(obj, x1, x2, y1, y2)
-            d = ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
-        end
-        
-        %% Evaluates the safety cost along the trajectory
-        function safety_cost = eval_traj_safety_cost(obj, curr_spline, brs_planner)
-            safety_cost = 0;
-            xs = curr_spline{1}; ys = curr_spline{2}; ths = curr_spline{3}; 
-            for i = 1:length(xs)
-                state = [xs(i), ys(i), ths(i)];
-                cost = brs_planner.get_value(state(1:3));
-                safety_cost = safety_cost + cost;
-            end 
-        end
 
         %% Evaluates the cost of replanning a new trajectory with respect to the current spline thresholded by a value
         function replan_cost = eval_traj_threshold_replan_cost(obj, curr_spline, old_xs, old_ys)

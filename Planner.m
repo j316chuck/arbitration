@@ -90,36 +90,6 @@ classdef Planner < handle
             end 
         end
         
-        function is_unsafe = is_unsafe_state(obj, value)
-            is_unsafe = (value <= obj.blending.zero_level_set);
-        end 
-        
-        function is_collision = collided_with_obstacle(obj)
-            u = eval_u(obj.exp.grid_2d, obj.exp.binary_occ_map, obj.state(1:2));
-            is_collision = (u < 0);
-        end 
-        
-        function is_goal = reached_goal(obj)
-            dist = obj.l2_dist(obj.state(1), obj.goal(1), obj.state(2), obj.goal(2));
-            is_goal = (dist <= obj.stop_goal_dx); 
-        end 
-        
-        function is_max_timestamps = reached_max_timestamps(obj)
-            is_max_timestamps = (obj.cur_timestamp >= obj.max_num_planning_pts);
-        end 
-        
-        function d = l2_dist(obj, x1, x2, y1, y2)
-            d = ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
-        end 
-        
-        function verbose_plot(obj, threshold)
-            if obj.plot_level >= threshold
-                obj.plot_planners();
-                obj.plot_metrics(); 
-            end 
-        end 
-       
-        
         function blend_mpc_controls(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
             while 1 
@@ -139,7 +109,7 @@ classdef Planner < handle
                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
                   end %TODO add if condition for not enough steps in orig_traj
                   obj.verbose_plot(2);
-                  obj.spline_cost_plot(2); 
+                  %obj.spline_cost_plot(2); %add for spline planner visualization debugging
                end 
                % get control per timestamp
                x = reshape(obj.state(1:3), [1, 3]);
@@ -259,6 +229,55 @@ classdef Planner < handle
             end 
         end
                 
+        function [opt_traj] = replan_after_every_k_timestamps_with_safety_controls(plan)
+              if isempty(plan)
+                  opt_traj = plan;
+                  return; 
+              end
+              old_x = obj.dynSys.x; % save state
+              opt_traj = plan;
+              opt_planner_cost = obj.spline_planner.eval_cost(plan); 
+              opt_safety_cost = obj.spline_planner.eval_traj_safety_cost(plan, obj.brs_planner);
+              next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
+              Nt = length(plan{1}); 
+              obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
+              num_steps_per_mpc_replan = ceil(obj.blending.replan_dt / obj.dt); 
+              interval = 5;
+              num_safety_controls = 3; 
+              for i=1:interval:num_steps_per_mpc_replan
+                  % move along orig traj
+                  st = obj.cur_timestamp; %16
+                  et = obj.cur_timestamp + i - 2; %16 + 6 - 2 = 20
+                  new_traj = obj.orig_traj(:, st:et); %16-20
+                  obj.dynSys.x = obj.orig_traj(:, et+1); %21
+                  % apply safety controls
+                  safety_counter = 0; 
+                  while safety_counter < num_safety_controls
+                      x = reshape(obj.dynSys.x, [1, 3]); 
+                      u = obj.brs_planner.get_avoid_u(x); 
+                      new_traj(:, end) = [x, u]; 
+                      obj.dynSys.updateState(u, obj.dt, x');
+                      safety_counter = safety_counter + 1; 
+                  end 
+                  % replan after applying safety controls
+                  new_state = obj.dynSys.x; 
+                  new_plan = obj.spline_planner.plan(new_state);
+                  replan_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}];
+                  new_traj = [new_traj, replan_traj];
+                  new_traj = new_traj(1:Nt, :); 
+                  planner_cost = obj.spline_planner.eval_cost(new_traj); 
+                  safety_cost = obj.spline_planner.eval_traj_safety_cost(new_traj, obj.brs_planner); 
+                  if safety_cost < opt_safety_cost && planner_cost < opt_planner_cost
+                      opt_planner_cost = planner_cost; 
+                      opt_safety_cost = safety_cost; 
+                      opt_traj = new_traj; 
+                  end 
+              end
+              opt_traj(6, :) = 1; % blend_alpha
+              obj.blend_traj = opt_traj; % set blend trajectory
+              obj.dynSys.x = old_x; % restore state
+        end 
+            
         function blend_mpc_controls_replan(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
             while 1 
@@ -272,55 +291,15 @@ classdef Planner < handle
                if obj.replan_time_counter >= obj.blending.replan_dt 
                   obj.replan_time_counter = 0;
                   plan = obj.spline_planner.plan(obj.state);
-                  safety_cost = 
-                  goal_cost = obj.spline_planner.eva
-                  if ~isempty(plan)
-                      next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
-                      obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
-                      old_x = obj.dynSys.x; 
-                      num_steps_per_mpc_replan = ceil(obj.blending.replan_dt / obj.dt); 
-                      interval = 5;
-                      num_safety_controls = 3; 
-                      reward = 0; 
-                      for i=1:interval:num_steps_per_mpc_replan
-                          % orig traj 
-                          st = obj.cur_timestamp; %16
-                          et = obj.cur_timestamp + i - 2; %16 + 6 - 2 = 20
-                          new_traj = obj.orig_traj(st:et, :);
-                          obj.dynSys.x = obj.orig_traj(et+1, :); %21
-                          % safety controls
-                          safety_time = 0; 
-                          while safety_time < num_safety_controls
-                              x = reshape(obj.dynSys.x, [1, 3]); 
-                              u = obj.brs_planner.get_avoid_u(x); 
-                              new_traj(end, :) = [x, u]; 
-                              obj.dynSys.updateState(u, obj.dt, x');
-                              safety_time = safety_time + 1; 
-                          end 
-                          % replan from safety controls
-                          new_state = obj.dynSys.x; 
-                          new_plan = obj.spline_planner.plan(new_state);
-                          replan_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}];
-                          new_traj = [new_traj; replan_traj];
-                          
-                      end 
-                      obj.dynSys.x = old_x;
-                  end %TODO add if condition for not enough steps in orig_traj
+                  if strcmp(obj.blending.scheme, 'replan_after_k')
+                      obj.replan_after_every_k_timestamps_with_safety_controls(plan);
+                  end
                   obj.verbose_plot(2);
                end 
                % get control per timestamp
                x = reshape(obj.state(1:3), [1, 3]);
-               v = obj.brs_planner.get_value(x);
-               u1 = [obj.orig_traj(4, obj.cur_timestamp), obj.orig_traj(5, obj.cur_timestamp)];
-               u2 = obj.brs_planner.get_avoid_u(x)';
-               if obj.next_traj_safety_scores_decreasing()
-                   alpha = 0; 
-                   obj.replan_time_counter = obj.blending.replan_dt;
-               else 
-                   alpha = 1; 
-               end 
-               assert(0 <= alpha && alpha <= 1);
-               u = alpha * u1 + (1 - alpha) * u2;
+               u = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)];
+               alpha = 1; 
                % update state
                obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
                obj.dynSys.updateState(u, obj.dt, x'); 
@@ -329,6 +308,35 @@ classdef Planner < handle
                obj.replan_time_counter = obj.replan_time_counter + obj.dt;
             end 
         end
+                
+        function is_unsafe = is_unsafe_state(obj, value)
+            is_unsafe = (value <= obj.blending.zero_level_set);
+        end 
+        
+        function is_collision = collided_with_obstacle(obj)
+            u = eval_u(obj.exp.grid_2d, obj.exp.binary_occ_map, obj.state(1:2));
+            is_collision = (u < 0);
+        end 
+        
+        function is_goal = reached_goal(obj)
+            dist = obj.l2_dist(obj.state(1), obj.goal(1), obj.state(2), obj.goal(2));
+            is_goal = (dist <= obj.stop_goal_dx); 
+        end 
+        
+        function is_max_timestamps = reached_max_timestamps(obj)
+            is_max_timestamps = (obj.cur_timestamp >= obj.max_num_planning_pts);
+        end 
+        
+        function d = l2_dist(obj, x1, x2, y1, y2)
+            d = ((x1 - x2) .^ 2 + (y1 - y2) .^ 2) .^ 0.5;
+        end 
+        
+        function verbose_plot(obj, threshold)
+            if obj.plot_level >= threshold
+                obj.plot_planners();
+                obj.plot_metrics(); 
+            end 
+        end 
 
         function new_plan = truncate_plan_with_replan_time(obj, plan)
             num_steps_per_mpc_replan = ceil(obj.blending.replan_dt / obj.dt); 

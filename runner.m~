@@ -1,36 +1,29 @@
 function runner()
     load('./data/sampled_goals.mat');
+    N = length(goals);
     weights = [1, 10];
-    zlsets = [0.1, 0.2];
-    failed_exps = {};
     for i = 1:10
         for wi=1:2
-            for zli=1:2
-                pb.exp_name = 'tmp';
-                try 
-                    tic; 
-                    close all;
-                    params = default_hyperparams();
-                    params.zero_level_set = zlsets(zli); 
-                    params.spline_obs_weight = weights(wi); 
-                    params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); 
-                    s = starts(i, :); 
-                    g = goals(i, :); 
-                    params.start = s';
-                    params.goal = goals(i, :)';
-                    exp = load_exp(params); 
-                    pb = Planner(exp); 
-                    pb.blend_mpc_controls(); 
-                    fprintf("Time: %f (sec) Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n", num2str(toc), s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
-                catch
-                    fprintf("Failed %s\n", pb.exp_name); 
-                    failed_exps{end+1} = pb.exp_name;
-                end
-            end 
+            pb.exp_name = 'tmp';
+            try 
+                tic; 
+                params = default_hyperparams();
+                params.zero_level_set = 0.15; 
+                params.spline_obs_weight = weights(wi); 
+                params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); 
+                s = starts(i, :); 
+                g = goals(i, :); 
+                params.start = s';
+                params.goal = goals(i, :)';
+                exp = load_exp(params); 
+                pb = Planner(exp); 
+                pb.blend_mpc_controls(); 
+                fprintf("Time: %f (sec) Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n",num2str(toc), s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
+            catch
+                fprintf("Failed %s", pb.exp_name); 
+            end
         end 
-        save('failed_exps.mat');
-    end
-end
+        save('failed
 %               pb.exp_name = 'tmp';
 %               try
 %                 tic;
@@ -134,3 +127,6 @@ end
 %             end
 %                 save('./outputs/results.mat');
 
+        end 
+    end 
+end 

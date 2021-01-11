@@ -9,11 +9,12 @@ function output_analysis()
     %% Edit these variables for different experiment types (separated by folder name)
     path = './outputs/';
     exp_types = {
-        %'probabilistic_blend_safety_control_traj_replan_dt_1.500_num_samples_10_level_set_0.20', ... 
-        %'switch_replan_dt_1.500_zero_level_set_0.10'
-        'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_1.000000', ...
+        'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_10.00', ...
+        'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_1.00', ...
+        'switch_replan_dt_1.500_zero_level_set_0.100_spline_obs_weight_10.00', ...
+        'switch_replan_dt_1.500_zero_level_set_0.100_spline_obs_weight_1.00', ...
     };
-    results_folder = './outputs/initial_results/';
+    results_folder = './outputs/exp_0_results/';
     if ~exist(results_folder, 'dir')
         mkdir(results_folder); 
     end 
@@ -36,8 +37,7 @@ function output_analysis()
                 exp_name = fullfile(s.folder, s.name); 
                 f = fullfile(exp_name, 'final_state.mat'); 
                 names = all_exp_names{eti};
-                ni = size(names, 1); 
-                names{ni} = exp_name; 
+                names{end+1} = exp_name; 
                 all_exp_names{eti} = names;
                 metrics = all_exp_metrics{eti}; 
                 if isfile(f)
@@ -90,26 +90,26 @@ function output_analysis()
     
     %% Print summary statistics
     for i = 1:Nt
-        exp_type = exp_types{eti};
-        exp_metrics = all_exp_metrics{eti};  
-        alj = sum(exp_metrics(:, 1));
+        exp_type = exp_types{i};
+        exp_metrics = all_exp_metrics{i};  
+        alj = mean(exp_metrics(:, 1));
         slj = std(exp_metrics(:, 1)); 
         fprintf("Exp: %s avg lin jerk: %f std: %f\n", exp_type, alj, slj);
-        aaj = sum(exp_metrics(:, 2));
+        aaj = mean(exp_metrics(:, 2));
         saj = std(exp_metrics(:, 2)); 
         fprintf("Exp: %s avg ang jerk: %f std: %f\n", exp_type, aaj, saj);
-        assh = sum(exp_metrics(:, 3));
+        assh = mean(exp_metrics(:, 3));
         sssh = std(exp_metrics(:, 3)); 
         fprintf("Exp: %s avg safety_score: %f std: %f\n", exp_type, assh, sssh); 
-        adot = sum(exp_metrics(:, 4));
+        adot = mean(exp_metrics(:, 4));
         sdot = std(exp_metrics(:, 4)); 
         fprintf("Exp: %s avg dist to opt traj: %f std: %f\n", exp_type, adot, sdot); 
-        ati = sum(exp_metrics(:, 5));
+        ati = mean(exp_metrics(:, 5));
         sti = std(exp_metrics(:, 5)); 
         fprintf("Exp: %s avg time taken: %f std: %f\n", exp_type, ati, sti); 
-        ans = sum(exp_metrics(:, 6));
+        asst = mean(exp_metrics(:, 6));
         sns = std(exp_metrics(:, 6)); 
-        fprintf("Exp: %s avg num safety controls taken: % std: %f\n", exp_type, ans, sns); 
+        fprintf("Exp: %s avg num safety controls taken: %f std: %f\n", exp_type, asst, sns); 
         termination = exp_metrics(:, 7);
         num_success = sum(termination == 0); 
         num_crashed = sum(termination == 1); 
