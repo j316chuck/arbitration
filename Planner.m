@@ -58,7 +58,7 @@ classdef Planner < handle
             obj.exp_name = sprintf("%s_map_%s_%s_blending_scheme_%s_%s", exp.map_basename, start_str, goal_str, exp.blending.scheme, exp.hyperparam_str); 
             obj.output_folder = sprintf("outputs/%s", obj.exp_name); 
             obj.plot_level = obj.exp.plot_level;
-            obj.orig_traj = zeros(0,5);
+            obj.orig_traj = zeros(0, 5);
             obj.blend_traj = [];
             
             if exp.clear_dir && exist(obj.output_folder, 'dir')
@@ -96,7 +96,7 @@ classdef Planner < handle
         
         function is_collision = collided_with_obstacle(obj)
             u = eval_u(obj.exp.grid_2d, obj.exp.binary_occ_map, obj.state(1:2));
-            is_collision = (u >= 0);
+            is_collision = (u < 0);
         end 
         
         function is_goal = reached_goal(obj)
@@ -118,6 +118,7 @@ classdef Planner < handle
                 obj.plot_metrics(); 
             end 
         end 
+       
         
         function blend_mpc_controls(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
@@ -138,6 +139,7 @@ classdef Planner < handle
                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
                   end %TODO add if condition for not enough steps in orig_traj
                   obj.verbose_plot(2);
+                  obj.spline_cost_plot(2); 
                end 
                % get control per timestamp
                x = reshape(obj.state(1:3), [1, 3]);
@@ -169,45 +171,6 @@ classdef Planner < handle
                obj.replan_time_counter = obj.replan_time_counter + obj.dt;
             end 
         end
-       
-        function new_plan = truncate_plan_with_replan_time(obj, plan)
-            num_steps_per_mpc_replan = ceil(obj.blending.replan_dt / obj.dt); 
-            if iscell(plan)
-                new_plan = {plan{1}(1:num_steps_per_mpc_replan), plan{2}(1:num_steps_per_mpc_replan), plan{3}(1:num_steps_per_mpc_replan), plan{4}(1:num_steps_per_mpc_replan), plan{5}(1:num_steps_per_mpc_replan)};
-            else
-                new_plan = plan(:, 1:num_steps_per_mpc_replan);
-            end 
-        end 
-        
-        function use_safety_traj_in_next_mpc_plan(obj, next_safety_traj)
-            alpha = -0.1; 
-            blend_alpha = (ones(size(next_safety_traj, 2), 1) * alpha)';
-            next_blend_traj = [next_safety_traj; blend_alpha];
-            obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
-        end 
-        
-                
-        function use_modified_safe_orig_traj_in_next_mpc_plan(obj, orig_safety_traj)
-            original_x = obj.dynSys.x; % copy state 
-            safe_orig_traj = zeros(6, 0);
-            safety_state = obj.state; 
-            used_safety = false;            
-            for i = 1:length(orig_safety_traj)
-              x = reshape(safety_state(1:3), [1, 3]);
-              u = [orig_safety_traj(4, i), orig_safety_traj(5, i)];
-              a = 1;
-              if used_safety || (obj.brs_planner.get_value(x) < obj.blending.zero_level_set)
-                  used_safety = true; 
-                  u = reshape(obj.brs_planner.get_avoid_u(x), [1, 2]);
-                  a = -0.2;
-              end 
-              obj.dynSys.updateState(u, obj.dt, x'); 
-              safe_orig_traj(:, i) = [x, u, a]; %old state new control
-              safety_state = [obj.dynSys.x', u]; % new state and new control
-            end 
-            obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), safe_orig_traj]; 
-            obj.dynSys.x = original_x; % restore state
-        end 
         
         function blend_mpc_traj(obj) 
             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
@@ -295,6 +258,100 @@ classdef Planner < handle
                obj.replan_time_counter = obj.replan_time_counter + obj.dt;
             end 
         end
+       
+        %         
+%         function blend_mpc_controls_replan(obj) 
+%             obj.dynSys = obj.spline_planner.dynSys; % temporary hack to fix the dynSys not working
+%             while 1 
+%                % finish mpc trajectory condition
+%                if obj.reached_max_timestamps() || obj.reached_goal() || obj.collided_with_obstacle()
+%                   obj.verbose_plot(1);
+%                   obj.save_state();
+%                   return;
+%                end 
+%                % replan condition
+%                if obj.replan_time_counter >= obj.blending.replan_dt 
+%                   obj.replan_time_counter = 0;
+%                   plan = obj.spline_planner.plan(obj.state); 
+%                   
+%                   if ~isempty(plan)
+%                       next_orig_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
+%                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
+%                       old_x = obj.dynSys.x; 
+%                       num_timestamps = obj.replan_dt/obj.dt; 
+%                       for i=1:num_timestamps 
+%                           x = reshape(next_orig_traj(i, 1:3), [1, 3]);
+%                           u = obj.brs_planner.get_avoid_u(x); 
+%                           obj.dynSys.x = x;
+%                           obj.dynSys.updateState(u, obj.dt, x); 
+%                           state = [obj.dynSys.x', u];
+%                           new_plan = obj.spline_planner.plan(obj.state); 
+%                           
+%                       end 
+%                       obj.dynSys.x = old_x;
+%                   end %TODO add if condition for not enough steps in orig_traj
+%                   obj.verbose_plot(2);
+%                end 
+%                % get control per timestamp
+%                x = reshape(obj.state(1:3), [1, 3]);
+%                v = obj.brs_planner.get_value(x);
+%                u1 = [obj.orig_traj(4, obj.cur_timestamp), obj.orig_traj(5, obj.cur_timestamp)];
+%                u2 = obj.brs_planner.get_avoid_u(x)';
+%                if obj.next_traj_safety_scores_decreasing()
+%                    alpha = 0; 
+%                    obj.replan_time_counter = obj.blending.replan_dt;
+%                else 
+%                    alpha = 1; 
+%                end 
+%                assert(0 <= alpha && alpha <= 1);
+%                u = alpha * u1 + (1 - alpha) * u2;
+%                % update state
+%                obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+%                obj.dynSys.updateState(u, obj.dt, x'); 
+%                obj.state = [obj.dynSys.x', u]; % new state and new control
+%                obj.cur_timestamp = obj.cur_timestamp + 1;
+%                obj.replan_time_counter = obj.replan_time_counter + obj.dt;
+%             end 
+%         end
+
+        function new_plan = truncate_plan_with_replan_time(obj, plan)
+            num_steps_per_mpc_replan = ceil(obj.blending.replan_dt / obj.dt); 
+            if iscell(plan)
+                new_plan = {plan{1}(1:num_steps_per_mpc_replan), plan{2}(1:num_steps_per_mpc_replan), plan{3}(1:num_steps_per_mpc_replan), plan{4}(1:num_steps_per_mpc_replan), plan{5}(1:num_steps_per_mpc_replan)};
+            else
+                new_plan = plan(:, 1:num_steps_per_mpc_replan);
+            end 
+        end 
+        
+        function use_safety_traj_in_next_mpc_plan(obj, next_safety_traj)
+            alpha = -0.1; 
+            blend_alpha = (ones(size(next_safety_traj, 2), 1) * alpha)';
+            next_blend_traj = [next_safety_traj; blend_alpha];
+            obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+        end 
+        
+                
+        function use_modified_safe_orig_traj_in_next_mpc_plan(obj, orig_safety_traj)
+            original_x = obj.dynSys.x; % copy state 
+            safe_orig_traj = zeros(6, 0);
+            safety_state = obj.state; 
+            used_safety = false;            
+            for i = 1:length(orig_safety_traj)
+              x = reshape(safety_state(1:3), [1, 3]);
+              u = [orig_safety_traj(4, i), orig_safety_traj(5, i)];
+              a = 1;
+              if used_safety || (obj.brs_planner.get_value(x) < obj.blending.zero_level_set)
+                  used_safety = true; 
+                  u = reshape(obj.brs_planner.get_avoid_u(x), [1, 2]);
+                  a = -0.2; % low alpha to indicate we used safety control
+              end 
+              obj.dynSys.updateState(u, obj.dt, x'); 
+              safe_orig_traj(:, i) = [x, u, a]; % old state new control
+              safety_state = [obj.dynSys.x', u]; % new state and new control
+            end 
+            obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), safe_orig_traj]; 
+            obj.dynSys.x = original_x; % restore state
+        end 
         
         function is_safe = is_safe_traj(obj, traj)
             xs = traj{1}; ys = traj{2}; ths = traj{3};
@@ -347,6 +404,17 @@ classdef Planner < handle
             obj.spline_planner.plot_replan_scores(savefigpath);
         end 
         
+        function spline_cost_plot(obj, verbosity)
+            if obj.plot_level < verbosity 
+                return 
+            end 
+            savefigpath = '';
+            if obj.exp.save_plot
+                savefigpath = sprintf("%s/spline_cost_timestamp_%d", obj.output_folder, obj.cur_timestamp);  
+            end 
+            obj.spline_planner.plot_spline_costs(savefigpath);
+        end 
+        
         function plot_metrics(obj)
             if isempty(obj.blend_traj)
                 return
@@ -355,47 +423,57 @@ classdef Planner < handle
             figure(10);
             clf;
             hold on 
-            set(gcf,'Position', [10 10 800 900])
-            subplot(4, 2, 1); 
-            plot(1:length(obj.scores.vel), obj.scores.vel, 'bo--');
+            set(gcf,'Position', [10 10 800 1200])
+            subplot(5, 2, 1); 
+            plot(1:length(obj.scores.lin_vel), obj.scores.lin_vel, 'bo--');
             title("Linear Velocity");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(4, 2, 2); 
-            plot(1:length(obj.blend_traj(5, :)), obj.blend_traj(5, :), 'bo--');
+            subplot(5, 2, 2); 
+            plot(1:length(obj.scores.ang_vel), obj.scores.ang_vel, 'bo--');
             title("Angular Velocity");
             xlabel("iteration");
-            ylabel("mps"); 
-            subplot(4, 2, 3); 
-            plot(1:length(obj.scores.accel), obj.scores.accel, 'bo--');
+            ylabel("rps"); 
+            subplot(5, 2, 3); 
+            plot(1:length(obj.scores.lin_accel), obj.scores.lin_accel, 'bo--');
             title("Linear Accel");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(4, 2, 4); 
-            plot(1:length(obj.scores.jerk), obj.scores.jerk, 'bo--');
+            subplot(5, 2, 4); 
+            plot(1:length(obj.scores.ang_accel), obj.scores.ang_accel, 'bo--');
+            title("Angular Accel");
+            xlabel("iteration");
+            ylabel("rps"); 
+            subplot(5, 2, 5); 
+            plot(1:length(obj.scores.lin_jerk), obj.scores.lin_jerk, 'bo--');
             title("Linear Jerk");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(4, 2, 5); 
+            subplot(5, 2, 6); 
+            plot(1:length(obj.scores.ang_jerk), obj.scores.ang_jerk, 'bo--');
+            title("Angular Jerk");
+            xlabel("iteration");
+            ylabel("rps"); 
+            subplot(5, 2, 7); 
             plot(1:length(obj.scores.safety_score), obj.scores.safety_score, 'bo--');
             title("Safety Score");
             xlabel("iteration");
             ylabel("brs value function"); 
-            subplot(4, 2, 6); 
-            plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
-            title("Dist to Opt Traj");
-            xlabel("iteration");
-            ylabel("meters"); 
-            subplot(4, 2, 7); 
-            plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
-            title("Dist to Goal");
-            xlabel("iteration");
-            ylabel("meters"); 
-            subplot(4, 2, 8); 
+            subplot(5, 2, 8); 
             plot(1:length(obj.blend_traj(6, :)), obj.blend_traj(6, :), 'bo--');
             title("Blend Probability");
             xlabel("iteration");
             ylabel("alpha");
+            subplot(5, 2, 9); 
+            plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
+            title("Dist to Opt Traj");
+            xlabel("iteration");
+            ylabel("meters"); 
+            subplot(5, 2, 10); 
+            plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
+            title("Dist to Goal");
+            xlabel("iteration");
+            ylabel("meters"); 
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/metrics.fig", obj.output_folder);
                 savefig(savefigpath); 
@@ -456,13 +534,15 @@ classdef Planner < handle
             l = legend('Location', 'NorthWest');
             set(l, 'Interpreter', 'none')
             title(obj.exp_name, 'Interpreter', 'None');
+            % add scores caption
             if ~isempty(obj.scores) 
-                ajs = sprintf("avg_jerk: %.5f", obj.scores.avg_jerk);
+                aljs = sprintf("avg_lin_jerk: %.5f", obj.scores.avg_lin_jerk);
+                aajs = sprintf("avg_ang_jerk: %.5f", obj.scores.avg_ang_jerk);
                 adgs = sprintf("avg_dist_to_goal: %.5f", obj.scores.avg_dist_to_goal); 
-                ash = sprintf("avg_safety_score: %.5f", obj.scores.avg_safety_score); 
+                assh = sprintf("avg_safety_score: %.5f", obj.scores.avg_safety_score); 
                 adot = sprintf("avg_dist_to_opt_traj: %.5f", obj.scores.avg_dist_to_opt_traj); 
-                obj.objective_str = sprintf('%s\n%s\n%s\n%s', ajs, adgs, ash, adot); 
-                annotation('textbox',[.7 .90 1 .0], 'String', obj.objective_str,'FitBoxToText','on', 'Interpreter', 'None');
+                obj.objective_str = sprintf('%s\n%s\n%s\n%s\n%s', aljs, aajs, adgs, assh, adot); 
+                annotation('textbox', [.7 .90 1 .0], 'String', obj.objective_str, 'FitBoxToText', 'on', 'Interpreter', 'None');
             end 
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/planners_%d.fig", obj.output_folder, obj.cur_timestamp);

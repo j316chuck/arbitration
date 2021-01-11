@@ -12,6 +12,7 @@ function output_analysis()
         %'probabilistic_blend_safety_control_traj_replan_dt_1.500_num_samples_10_level_set_0.20', ... 
         %'switch_replan_dt_1.500_zero_level_set_0.10'
         'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_1.000000', ...
+        'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_100', ...
     };
     results_folder = './outputs/initial_results/';
     if ~exist(results_folder, 'dir')
@@ -20,8 +21,8 @@ function output_analysis()
 
     %% Get All Experiment Results Data
     Nt = length(exp_types); 
-    all_exp_metrics = {}; % maps exp_types -> list of metrics
-    all_exp_names = {};   % maps exp_types -> list of exp names
+    all_exp_metrics = cell(Nt); % maps exp_types -> list of metrics
+    all_exp_names = cell(Nt);   % maps exp_types -> list of exp names
     for i = 1:Nt
         all_exp_metrics{i} = zeros(0, 7); 
         all_exp_names{i} = {}; 
@@ -65,7 +66,7 @@ function output_analysis()
 %                         fprintf("Tle exp: %s\n", exp_name);  
 %                     end 
                 else 
-                    metrics(length(metrics)+1, :) = -ones(7, 1)' * 1; 
+                    metrics(length(metrics)+1, :) = [-1, -1, -1, -1, -1, -1, -1];
                     fprintf("Failed exp: %s\n", exp_name); 
                 end 
                 all_exp_metrics{eti} = metrics;
@@ -77,7 +78,7 @@ function output_analysis()
     total_exp_num = zeros(Nt); % maps exp type -> total exp num
     for  i=1:Nt 
          exp_metrics = all_exp_metrics{eti};
-         total_exp_num(i) = size(exp_metrics, 1); 
+         total_exp_num(i) = length(exp_metrics); 
     end 
     if ~all(total_exp_num == total_exp_num(1))
         warning("Unequal amount of experiments run for each experiment type");
@@ -102,10 +103,10 @@ function output_analysis()
         fprintf("Exp: %s avg safety_score: %f std: %f\n", exp_type, assh, sssh); 
         adot = sum(exp_metrics(:, 4));
         sdot = std(exp_metrics(:, 4)); 
-        fprintf("Exp: %s avg dist to opt traj: %f std: %f\n", exp_type, adot, sdot); 
+        fprintf("Exp: %s avg dist to opt traj: % std: %f\n", exp_type, adot, sdot); 
         ati = sum(exp_metrics(:, 5));
         sti = std(exp_metrics(:, 5)); 
-        fprintf("Exp: %s avg time taken: %f std: %f\n", exp_type, ati, sti); 
+        fprintf("Exp: %s avg time taken: % std: %f\n", exp_type, ati, sti); 
         ans = sum(exp_metrics(:, 6));
         sns = std(exp_metrics(:, 6)); 
         fprintf("Exp: %s avg num safety controls taken: % std: %f\n", exp_type, ans, sns); 
@@ -113,7 +114,7 @@ function output_analysis()
         num_success = sum(termination == 0); 
         num_crashed = sum(termination == 1); 
         num_tle = sum(termination == 2); 
-        num_error = sum(termination == -1); 
+        num_error = sum(terination == -1); 
         total_exp = total_exp_num(i);
         fprintf("Exp: %s %d/%d reached goal\n", exp_type, num_success, total_exp);
         fprintf("Exp: %s %d/%d crashed\n", exp_type, num_crashed, total_exp);

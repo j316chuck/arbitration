@@ -75,14 +75,14 @@ function params = spline_params()
     params.goal_radius = 1;
     params.sd_goal = shapeCylinder(params.g2d, 3, params.goal(1:2), params.goal_radius); % 2D function (x,y)
 
-
     %% Create spline planner!
     fprintf('Setting up SINGLE SPLINE DRIVING PLANNER...\n');
     %% Create spline planner!
     params.planner = SplinePlanner(params.num_waypts, ...
                                 params.horizon, ...
                                 params.g2d, ...
-                                params.dynSys);   
+                                params.dynSys, ...
+                                params.raw_sd_obs);   
                          
                             
 end 
