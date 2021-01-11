@@ -36,7 +36,8 @@ function output_analysis()
                 exp_name = fullfile(s.folder, s.name); 
                 f = fullfile(exp_name, 'final_state.mat'); 
                 names = all_exp_names{eti};
-                names{length(names)+1} = exp_name; 
+                ni = size(names, 1); 
+                names{ni} = exp_name; 
                 all_exp_names{eti} = names;
                 metrics = all_exp_metrics{eti}; 
                 if isfile(f)
@@ -55,8 +56,8 @@ function output_analysis()
                                 total_time; ... 
                                 num_safety_control; ...
                                 obj.termination_state
-                              ]; 
-                    metrics(length(metrics)+1, :) = metric; 
+                              ];
+                    metrics(end+1, :) = metric; 
 %                     debugging failed cases 
 %                     if obj.termination_state == 1
 %                         fprintf("Crashed exp: %s\n", exp_name);  
@@ -65,7 +66,7 @@ function output_analysis()
 %                         fprintf("Tle exp: %s\n", exp_name);  
 %                     end 
                 else 
-                    metrics(length(metrics)+1, :) = -ones(7, 1)' * 1; 
+                    metrics(end+1, :) = -ones(7, 1)' * 1; 
                     fprintf("Failed exp: %s\n", exp_name); 
                 end 
                 all_exp_metrics{eti} = metrics;
