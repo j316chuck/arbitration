@@ -28,7 +28,7 @@ function [params] = default_hyperparams()
     params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
     params.num_alpha_samples = 10; 
     %params.blend_function = @(v) max(min(1, 1-(v/params.temperature)), 0);
-    params.spline_obs_weight = 2; 
+    params.spline_obs_weight = 1; 
     params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_%s_temp_%.3f", params.replan_dt, params.blend_function_name, params.temperature); 
@@ -37,7 +37,7 @@ function [params] = default_hyperparams()
 
     % file path params
     params.clear_dir = false; 
-    params.run_planner = false; 
+    params.run_planner = true; 
     params.run_brs = false;
     params.save_planner = true; 
     params.load_planner = true;

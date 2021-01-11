@@ -31,6 +31,7 @@ classdef SplinePlanner < handle
         x3d 
         y3d
         t3d 
+        all_costs
     end
     
     methods
@@ -52,7 +53,7 @@ classdef SplinePlanner < handle
             obj.x2d = x2d;
             obj.y2d = y2d;
             obj.disc_2d = [obj.x2d(:), obj.y2d(:)];
-            obj.t3d = 0:pi/4:(2*pi-0.01);
+            obj.t3d = 0:pi/2:(2*pi-0.01);
             [x3d, y3d, t3d] = meshgrid(grid_2d.vs{1}, grid_2d.vs{2}, obj.t3d); 
             obj.disc_3d = [x3d(:), y3d(:), t3d(:)];
             obj.binary_occ_map = binary_occ_map; 
@@ -288,14 +289,14 @@ classdef SplinePlanner < handle
         function opt_spline = plan(obj, start)
             obj.start = start;
             
-            opt_reward = 100000000000000.0;
+            opt_cost = 100000000000000.0;
             opt_spline = {};
             curr_spline = {};
             
             % DEBUGGING
             %figure
             N = length(obj.disc_3d);
-            all_rewards = zeros(N, 3);
+            obj.all_costs = zeros(N, 5);
             for ti=1:N
                 candidate_goal = obj.disc_3d(ti, :);
                 
@@ -323,18 +324,20 @@ classdef SplinePlanner < handle
                
                 % If current spline is dyamically feasible, check if it is low cost.
                 if (feasible_horizon <= obj.horizon)
-                    reward = obj.eval_reward(curr_spline);
-                    if (reward < opt_reward)
-                        opt_reward = reward;
+                    goal_cost = obj.eval_goal_cost(curr_spline);
+                    obs_cost = obj.eval_obstacle_cost(curr_spline); 
+                    total_cost = obs_cost + goal_cost;
+                    if (total_cost < opt_cost)
+                        opt_cost = total_cost;
                         opt_spline = curr_spline;
                     end
-                    all_rewards(ti, :) = [candidate_goal(1), candidate_goal(2), reward];
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), goal_cost, obs_cost, total_cost];
                 else
-                    LARGE_INFEASIBLE_REWARD = 1000;
-                    all_rewards(ti, :) = [candidate_goal(1), candidate_goal(2), LARGE_INFEASIBLE_REWARD]; 
+                    BIG_COST = 1000; % hyperparams to make contour plots look pretty
+                    SMALL_COST = 200; % hyperparams to make contour plots look pretty
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), SMALL_COST, BIG_COST, BIG_COST]; 
                 end
             end
-            obj.plot_spline_reward(start, all_rewards);
             if isempty(opt_spline)
                 warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
             else
@@ -342,34 +345,46 @@ classdef SplinePlanner < handle
             end 
         end
        
-        function plot_spline_reward(obj, start, all_rewards)
-            figure(3); 
-            clf;
-            set(gcf, 'Position', [100, 100, 1200, 900])
-            N = length(obj.t3d); 
-            Nc = 3;
-            Nr = ceil(N / Nc); 
-            ns = prod(obj.grid_2d.N); 
-            for ti = 1:N
-                % getting reward at specific theta
-                theta = obj.t3d(ti);
-                si = (ti-1) * ns + 1;
-                ei = ti * ns;
-                rews = all_rewards(si:ei, 3); 
-                % plotting the obstacle, start point, and spline rewards
-                subplot(Nr, Nc, ti); 
-                hold on; 
-                title(sprintf("theta %f", theta)); 
-                xlabel('x(m)');
-                ylabel('y(m)'); 
-                contourf(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, reshape(rews, obj.grid_2d.N'));
-                hcb1 = colorbar;
-                contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0]);
-                scatter(start(1), start(2), 100, 'rx'); 
-                th = start(3);
-                quiver(start(1), start(2), cos(th), sin(th));
+        function plot_spline_costs(obj, savefig_path)
+            %% Plot all spline costs
+            cost_names = {'goal_cost', 'obs_cost', 'total_cost'};
+            for ci = 1:length(cost_names)
+                h = figure(3); 
+                clf;
+                set(gcf, 'Position', [100, 100, 1200, 900])
+                N = length(obj.t3d); 
+                Nc = 3;
+                Nr = ceil(N / Nc); 
+                ns = prod(obj.grid_2d.N); 
+                name = cost_names{ci};
+                for ti = 1:N
+                    % getting reward at specific theta
+                    theta = obj.t3d(ti);
+                    si = (ti-1) * ns + 1;
+                    ei = ti * ns;
+                    ai = ci + 2; % all_costs_index for goal, obs, total cost is 3, 4, 5
+                    rews = obj.all_costs(si:ei, ai); 
+                    rews = reshape(rews, obj.grid_2d.N')'; % reshape and take tranpose
+                    % plotting the obstacle, start point, and spline rewards
+                    subplot(Nr, Nc, ti); 
+                    hold on; 
+                    title(sprintf("%s theta %f", name, theta), 'interpreter', 'none'); 
+                    xlabel('x(m)');
+                    ylabel('y(m)'); 
+                    contourf(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, rews);
+                    colorbar;
+                    contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0]);
+                    scatter(obj.start(1), obj.start(2), 100, 'rx'); 
+                    th = obj.start(3);
+                    quiver(obj.start(1), obj.start(2), cos(th), sin(th));
+                end 
+                if ~isempty(savefig_path)
+                    path = sprintf("%s_%s.fig", savefig_path, name); 
+                    savefig(h, path);
+                end 
             end 
         end
+        
         function u = get_mpc_control(obj)
             if isempty(obj.opt_spline) || length(obj.opt_spline{4}) < 1
                 error("Opt spline not calculated yet"); 
@@ -433,6 +448,22 @@ classdef SplinePlanner < handle
             feasible_horizon = ...
                 max(feasible_horizon_speed, feasible_horizon_angular_vel);
         end
+        
+         %% Evaluates the obstacle cost along the trajectory.
+        function obs_cost = eval_obstacle_cost(obj, curr_spline)
+            xs = curr_spline{1};
+            ys = curr_spline{2};
+            traj = [xs', ys'];
+            obs_cost = sum(eval_u(obj.grid_2d, obj.sd_obs, traj));
+        end
+        
+        %% Evaluates the goal cost along the trajectory.
+        function goal_cost = eval_goal_cost(obj, curr_spline)
+            xs = curr_spline{1};
+            ys = curr_spline{2};
+            traj = [xs', ys'];
+            goal_cost = sum(eval_u(obj.grid_2d, obj.sd_goal, traj));
+        end 
         
         %% Evaluates the total reward along the trajectory.
         function reward = eval_reward(obj, curr_spline)

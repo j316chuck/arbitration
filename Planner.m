@@ -139,6 +139,7 @@ classdef Planner < handle
                       obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), next_orig_traj];
                   end %TODO add if condition for not enough steps in orig_traj
                   obj.verbose_plot(2);
+                  obj.spline_cost_plot(2); 
                end 
                % get control per timestamp
                x = reshape(obj.state(1:3), [1, 3]);
@@ -403,6 +404,17 @@ classdef Planner < handle
             obj.spline_planner.plot_replan_scores(savefigpath);
         end 
         
+        function spline_cost_plot(obj, verbosity)
+            if obj.plot_level < verbosity 
+                return 
+            end 
+            savefigpath = '';
+            if obj.exp.save_plot
+                savefigpath = sprintf("%s/spline_cost_timestamp_%d", obj.output_folder, obj.cur_timestamp);  
+            end 
+            obj.spline_planner.plot_spline_costs(savefigpath);
+        end 
+        
         function plot_metrics(obj)
             if isempty(obj.blend_traj)
                 return
@@ -411,47 +423,57 @@ classdef Planner < handle
             figure(10);
             clf;
             hold on 
-            set(gcf,'Position', [10 10 800 900])
-            subplot(4, 2, 1); 
-            plot(1:length(obj.scores.vel), obj.scores.vel, 'bo--');
+            set(gcf,'Position', [10 10 800 1200])
+            subplot(5, 2, 1); 
+            plot(1:length(obj.scores.lin_vel), obj.scores.lin_vel, 'bo--');
             title("Linear Velocity");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(4, 2, 2); 
-            plot(1:length(obj.blend_traj(5, :)), obj.blend_traj(5, :), 'bo--');
+            subplot(5, 2, 2); 
+            plot(1:length(obj.scores.ang_vel), obj.scores.ang_vel, 'bo--');
             title("Angular Velocity");
             xlabel("iteration");
-            ylabel("mps"); 
-            subplot(4, 2, 3); 
-            plot(1:length(obj.scores.accel), obj.scores.accel, 'bo--');
+            ylabel("rps"); 
+            subplot(5, 2, 3); 
+            plot(1:length(obj.scores.lin_accel), obj.scores.lin_accel, 'bo--');
             title("Linear Accel");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(4, 2, 4); 
-            plot(1:length(obj.scores.jerk), obj.scores.jerk, 'bo--');
+            subplot(5, 2, 4); 
+            plot(1:length(obj.scores.ang_accel), obj.scores.ang_accel, 'bo--');
+            title("Angular Accel");
+            xlabel("iteration");
+            ylabel("rps"); 
+            subplot(5, 2, 5); 
+            plot(1:length(obj.scores.lin_jerk), obj.scores.lin_jerk, 'bo--');
             title("Linear Jerk");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(4, 2, 5); 
+            subplot(5, 2, 6); 
+            plot(1:length(obj.scores.ang_jerk), obj.scores.ang_jerk, 'bo--');
+            title("Angular Jerk");
+            xlabel("iteration");
+            ylabel("rps"); 
+            subplot(5, 2, 7); 
             plot(1:length(obj.scores.safety_score), obj.scores.safety_score, 'bo--');
             title("Safety Score");
             xlabel("iteration");
             ylabel("brs value function"); 
-            subplot(4, 2, 6); 
-            plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
-            title("Dist to Opt Traj");
-            xlabel("iteration");
-            ylabel("meters"); 
-            subplot(4, 2, 7); 
-            plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
-            title("Dist to Goal");
-            xlabel("iteration");
-            ylabel("meters"); 
-            subplot(4, 2, 8); 
+            subplot(5, 2, 8); 
             plot(1:length(obj.blend_traj(6, :)), obj.blend_traj(6, :), 'bo--');
             title("Blend Probability");
             xlabel("iteration");
             ylabel("alpha");
+            subplot(5, 2, 9); 
+            plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
+            title("Dist to Opt Traj");
+            xlabel("iteration");
+            ylabel("meters"); 
+            subplot(5, 2, 10); 
+            plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
+            title("Dist to Goal");
+            xlabel("iteration");
+            ylabel("meters"); 
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/metrics.fig", obj.output_folder);
                 savefig(savefigpath); 
@@ -512,13 +534,15 @@ classdef Planner < handle
             l = legend('Location', 'NorthWest');
             set(l, 'Interpreter', 'none')
             title(obj.exp_name, 'Interpreter', 'None');
+            % add scores caption
             if ~isempty(obj.scores) 
-                ajs = sprintf("avg_jerk: %.5f", obj.scores.avg_jerk);
+                aljs = sprintf("avg_lin_jerk: %.5f", obj.scores.avg_lin_jerk);
+                aajs = sprintf("avg_ang_jerk: %.5f", obj.scores.avg_ang_jerk);
                 adgs = sprintf("avg_dist_to_goal: %.5f", obj.scores.avg_dist_to_goal); 
-                ash = sprintf("avg_safety_score: %.5f", obj.scores.avg_safety_score); 
+                assh = sprintf("avg_safety_score: %.5f", obj.scores.avg_safety_score); 
                 adot = sprintf("avg_dist_to_opt_traj: %.5f", obj.scores.avg_dist_to_opt_traj); 
-                obj.objective_str = sprintf('%s\n%s\n%s\n%s', ajs, adgs, ash, adot); 
-                annotation('textbox',[.7 .90 1 .0], 'String', obj.objective_str,'FitBoxToText','on', 'Interpreter', 'None');
+                obj.objective_str = sprintf('%s\n%s\n%s\n%s\n%s', aljs, aajs, adgs, assh, adot); 
+                annotation('textbox', [.7 .90 1 .0], 'String', obj.objective_str, 'FitBoxToText', 'on', 'Interpreter', 'None');
             end 
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/planners_%d.fig", obj.output_folder, obj.cur_timestamp);
