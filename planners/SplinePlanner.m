@@ -270,8 +270,9 @@ classdef SplinePlanner < handle
             obj.start = start;
             spline_dist_hi = 2; spline_dist_lo = 0; spline_dist_radius = 1;
             num_candidate_splines = max_num_candidate_splines + 1; 
-            EPS = 1e-5;
-            while true || abs(spline_dist_lo - spline_dist_hi) <= EPS % avoid infinite loop
+            num_iter = 0; 
+            while true && num_iter < 10 % avoid infinite loop
+                num_iter = num_iter + 1;
                 if 0 < num_candidate_splines && num_candidate_splines <= max_num_candidate_splines
                     break 
                 elseif num_candidate_splines == 0 % increase spline dist thresh
@@ -512,14 +513,18 @@ classdef SplinePlanner < handle
         
         %% Check if spline trajectory passes through a point up to a certain radius 
         function pass = spline_passes_through_point(obj, curr_spline, pt, radius)
-            pass = false; 
             %obj.plot_spline_passes_through_point(curr_spline, pt); % debug
-            int_x = pt(1); int_y = pt(2); 
+            pass = false; 
+            pt_x = pt(1); pt_y = pt(2); pt_theta = pt(3);
+            ANGLE_THRESH = pi/10; 
             for i=1:obj.num_waypts
                 x = curr_spline{1}(i);
                 y = curr_spline{2}(i);
-                d = obj.l2_dist(x, int_x, y, int_y);
-                if d < radius
+                t = curr_spline{3}(i);
+                d = obj.l2_dist(x, pt_x, y, pt_y);
+                angle_is_close = abs(t - pt_theta) < ANGLE_THRESH;
+                point_is_close = d < radius; 
+                if angle_is_close && point_is_close 
                     pass = true;
                     return;
                 end 

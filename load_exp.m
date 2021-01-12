@@ -131,7 +131,8 @@ function [exp] = load_exp(params)
     exp.blending.num_alpha_samples = params.num_alpha_samples;
     exp.blending.replan_max_num_candidates = params.replan_max_num_candidates;
     exp.blending.blend_function_name = params.blend_function_name;
-    exp.blending.blend_function = params.blend_function; 
+    exp.blending.blend_function = params.blend_function;
+    exp.blending.use_safe_orig_traj = params.use_safe_orig_traj; 
     
     %% Experiment Params
     exp.hyperparam_str = params.hyperparam_str;

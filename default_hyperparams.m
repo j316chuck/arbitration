@@ -7,7 +7,7 @@ function [params] = default_hyperparams()
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [41; 41; 16];
     % navigation
-    params.start = [-9;-9;pi;0.01]; %end %[0.01; 3.86; pi/1.8; 0.01];%tight  %[-4.01; -4; pi/2; 0.01]; %[-7.36; -3.87; -0.02; 0.01]; %[1.49; 4.40; 1.95; 0.01]; %[-0.41; 3.86; 0.91; 0.01]; %[1.52; 1.23; -1.31; 0.01]; %[4.56; 3.95; -pi/10; 0.01]; %[-4; -1; pi/2; 0.01]; %[-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
+    params.start = [-3.989;0.7991;pi/4;0.01]; %end %[0.01; 3.86; pi/1.8; 0.01];%tight  %[-4.01; -4; pi/2; 0.01]; %[-7.36; -3.87; -0.02; 0.01]; %[1.49; 4.40; 1.95; 0.01]; %[-0.41; 3.86; 0.91; 0.01]; %[1.52; 1.23; -1.31; 0.01]; %[4.56; 3.95; -pi/10; 0.01]; %[-4; -1; pi/2; 0.01]; %[-9; -9.5; 0; 0.01]; %[0; -9; 0; 0.01];
     params.goal = [4;4;pi;0.01]; %end %[-1.5; 2.5; pi/2; 0.01]; %tight %[-8; -5; 0; 0.01]; %[3.71; -6.28; -2; 0.01]; %[-0.57; -9.62; -1.83; 0.01]; %[0.89; -6.80; -0.77; 0.01]; %[-9.04; -7.02; -0.12; 0.01]; %[4.76; 0.84; 1.26; 0.01]; %[3, 2.75, pi/2, 0.01]; %[2, 4, pi/2, 0.01];
     params.goal_radius = 0.5;
     % dynsys
@@ -25,18 +25,18 @@ function [params] = default_hyperparams()
     params.replan_level_set = 0.3; 
     params.replan_max_num_candidates = 10; 
     params.alpha = 0.3;
-    params.temperature = 0.1;
+    params.temperature = 0.2;
     params.blend_function_name = 'reg_sig'; %'sub'
     params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
     params.num_alpha_samples = 10; 
+    params.use_safe_orig_traj = true; 
     %params.blend_function = @(v) max(min(1, 1-(v/params.temperature)), 0);
     params.spline_obs_weight = 1; 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); %option 0 switch 
-    params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_replan_level_set_%f_spline_obs_weight_%f_max_num_candidates_%f", params.replan_dt, params.zero_level_set, params.replan_level_set, params.spline_obs_weight, params.replan_max_num_candidates);  %replan waypoint option 3
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_%s_temp_%.3f", params.replan_dt, params.blend_function_name, params.temperature); 
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.zero_level_set, params.spline_obs_weight); 
+    %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight); %option 1 alpha
+    params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_use_safe_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.use_safe_orig_traj, params.zero_level_set, params.spline_obs_weight); %option 1.5 probabilistic alpha
+    %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_replan_level_set_%f_spline_obs_weight_%f_max_num_candidates_%f", params.replan_dt, params.zero_level_set, params.replan_level_set, params.spline_obs_weight, params.replan_max_num_candidates);  %replan waypoint option 4
+
 
     % file path params
     params.clear_dir = false; 
