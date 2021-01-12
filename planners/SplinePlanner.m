@@ -53,7 +53,7 @@ classdef SplinePlanner < handle
             obj.x2d = x2d;
             obj.y2d = y2d;
             obj.disc_2d = [obj.x2d(:), obj.y2d(:)];
-            obj.t3d = 0:pi/8:(2*pi-0.01);
+            obj.t3d = 0:pi/2:(2*pi-0.01);
             [x3d, y3d, t3d] = meshgrid(grid_2d.vs{1}, grid_2d.vs{2}, obj.t3d); 
             obj.disc_3d = [x3d(:), y3d(:), t3d(:)];
             obj.binary_occ_map = binary_occ_map; 
@@ -193,8 +193,8 @@ classdef SplinePlanner < handle
             end
         end
         
-        %% Plans a path from start to goal.
-        function opt_spline = plan(obj, start)
+        %% Replans a path from start to goal that goes through an intermediate waypoint; 
+        function opt_spline = replan_through_waypoint(obj, start, intermediate_waypoint)
             obj.start = start;
             
             opt_cost = 100000000000000.0;
@@ -203,6 +203,65 @@ classdef SplinePlanner < handle
             
             % DEBUGGING
             %figure
+            N = length(obj.disc_3d);
+            obj.all_costs = zeros(N, 5);
+            num_valid_splines = 0; 
+            for ti=1:N
+                candidate_goal = obj.disc_3d(ti, :);
+                
+                % ignore candidate goals inside obstacles.
+                if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
+                    continue;
+                end
+                
+                % orientation should match with goal final vel ~= 0.
+                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
+                
+                % Compute spline from start to candidate (x,y) goal.
+                curr_spline = ...
+                    spline(start, candidate_goal, obj.horizon, obj.num_waypts);
+                
+                % Sanity check (and correct) all points on spline to be within env bounds.
+                curr_spline = obj.sanity_check_spline(curr_spline);
+                
+                % Compute the dynamically feasible horizon for the current plan.
+                feasible_horizon = ...
+                    obj.compute_dyn_feasible_horizon(curr_spline, ...
+                    obj.max_linear_vel, ...
+                    obj.max_angular_vel, ...
+                    obj.horizon);
+               
+                % If current spline is dyamically feasible and passes through the waypoint, check if it is low cost.
+                if (feasible_horizon <= obj.horizon) && obj.spline_passes_through_point(curr_spline, intermediate_waypoint)
+                    goal_cost = obj.eval_goal_cost(curr_spline);
+                    obs_cost = obj.eval_obstacle_cost(curr_spline); 
+                    total_cost = obs_cost + goal_cost;
+                    if (total_cost < opt_cost)
+                        opt_cost = total_cost;
+                        opt_spline = curr_spline;
+                    end
+                    num_valid_splines = num_valid_splines + 1; 
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), goal_cost, obs_cost, total_cost];
+                else
+                    BIG_COST = 1000; % hyperparams to make contour plots look pretty
+                    SMALL_COST = 200; % hyperparams to make contour plots look pretty
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), SMALL_COST, BIG_COST, BIG_COST]; 
+                end
+            end
+            if isempty(opt_spline)
+                warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
+            else
+                obj.opt_spline = opt_spline;
+            end 
+            fprintf("Total num valid splines: %d\n", num_valid_splines); 
+        end
+        
+        %% Plans a path from start to goal.
+        function opt_spline = plan(obj, start)
+            obj.start = start;            
+            opt_cost = 100000000000000.0;
+            opt_spline = {};
+            curr_spline = {};
             N = length(obj.disc_3d);
             obj.all_costs = zeros(N, 5);
             for ti=1:N
@@ -253,6 +312,7 @@ classdef SplinePlanner < handle
             end 
         end
         
+                
         %% Plot all spline replan scores
         function plot_replan_scores(obj, savefig_path)
             opt_xs = obj.opt_spline{1}; opt_ys = obj.opt_spline{2};
@@ -314,6 +374,15 @@ classdef SplinePlanner < handle
             end 
         end 
         
+        %% Debugging plots to see which splines pass through point
+        function plot_spline_passes_through_point(obj, curr_spline, pt)
+            figure(11); 
+            hold on; 
+            contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0]);
+            plot(curr_spline{1}, curr_spline{2}, 'b--o'); 
+            scatter(pt(1), pt(2), 20, 'rx'); 
+        end 
+        
         %% Plot all spline costs that it evaluates
         function plot_spline_costs(obj, savefig_path)
             cost_names = {'goal_cost', 'obs_cost', 'total_cost'};
@@ -353,6 +422,23 @@ classdef SplinePlanner < handle
                 end 
             end 
         end
+        
+        %% Check if spline trajectory passes through a point up to a certain radius 
+        function pass = spline_passes_through_point(obj, curr_spline, pt)
+            pass = false; 
+            SPLINE_PASS_RADIUS = 0.2;
+            %obj.plot_spline_passes_through_point(curr_spline, pt); % debug
+            int_x = pt(1); int_y = pt(2); 
+            for i=1:obj.num_waypts
+                x = curr_spline{1}(i);
+                y = curr_spline{2}(i);
+                d = obj.l2_dist(x, int_x, y, int_y);
+                if d < SPLINE_PASS_RADIUS
+                    pass = true;
+                    return;
+                end 
+            end
+        end 
         
         %% Check (and correct) if spline is inside environment bounds.
         function checked_spline = sanity_check_spline(obj, curr_spline)
