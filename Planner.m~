@@ -280,16 +280,14 @@ classdef Planner < handle
               obj.dynSys.x = old_x; % restore state
         end 
         
-        function [chosen_traj] = replan_waypoint(obj, plan)
+        function [opt_traj] = replan_waypoint(obj, plan)
               if isempty(plan) 
+                  opt_traj = plan;
                   return; 
               end
-              chosen_traj = [plan{1}; plan{2}; plan{3}; plan{4}; plan{5}];
-              obj.orig_traj = [obj.orig_traj(:, 1:obj.cur_timestamp-1), chosen_traj];
               mpc_plan = obj.truncate_plan_with_replan_time(plan);
               if obj.is_safe_traj(mpc_plan)
-                  chosen_traj(6, :) = 1; %blend alpha
-                  obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), chosen_traj];
+                  opt_traj = plan;
                   return; 
               end 
               % use original mpc planner until it's unsafe
@@ -299,12 +297,12 @@ classdef Planner < handle
               switch_blend_traj = mpc_traj(:, 1:ui-1); 
               obj.dynSys.x = mpc_traj(1:3, ui); 
               safety_vertex = obj.dynSys.x(1:3); 
+              threshold = 0.3;
               % apply zero levelset controls until safety score reaches a threshold
               while 1 
                   x = reshape(obj.dynSys.x, [1, 3]); 
                   safety_score = obj.brs_planner.get_value(x');
-                  reached_safe_point = (safety_score >= obj.blending.replan_level_set);
-                  if reached_safe_point
+                  if safety_score >= threshold
                       break 
                   end 
                   u = obj.brs_planner.get_avoid_u(x)'; 
@@ -314,13 +312,14 @@ classdef Planner < handle
               intermediate_waypt_vertex = [obj.dynSys.x', u];
               obj.switch_traj = [obj.switch_traj, switch_blend_traj];
               % replan through intermediate_waypoint after applying safety controls
-              max_num_candidates = obj.exp.blending.replan_max_num_candidates;
-              new_plan = obj.spline_planner.adaptive_replan_through_waypoint(obj.state, intermediate_waypt_vertex, max_num_candidates);
-              obj.plot_triangular_traj(switch_blend_traj, safety_vertex, intermediate_waypt_vertex); % debugging plots
-              % obj.plot_spline_cost(2); % debugging plots
-              chosen_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}];
-              chosen_traj(6, :) = 1; % blend_alpha
-              obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), chosen_traj];
+              max_num_points = 
+              new_plan = obj.spline_planner.adaptive_replan_through_waypoint(obj.state, intermediate_waypt_vertex, );
+              % debugging plots
+              obj.plot_triangular_traj(switch_blend_traj, safety_vertex, intermediate_waypt_vertex); 
+              obj.plot_spline_cost(2);
+              opt_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}];
+              opt_traj(6, :) = 1; % blend_alpha
+              obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), opt_traj];
               obj.dynSys.x = old_x; % restore state
         end
             
@@ -597,14 +596,14 @@ classdef Planner < handle
                 mpc_spline_xs = obj.orig_traj(1, :); 
                 mpc_spline_ys = obj.orig_traj(2, :); 
                 mpc_spline_ths = obj.orig_traj(3, :); 
-                obj.plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'orig traj');   
+                obj.plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'mpc spline');   
             end 
             % plot switch mpc traj
             if ~isempty(obj.switch_traj)
                 switch_xs = obj.switch_traj(1, :); 
                 switch_ys = obj.switch_traj(2, :); 
                 switch_ths = obj.switch_traj(3, :); 
-                obj.plot_traj(switch_xs, switch_ys, switch_ths, 'blue', 'switch traj');   
+                obj.plot_traj(switch_xs, switch_ys, switch_ths, 'red', 'switch traj');   
             end 
             % plot safety_traj
             if ~isempty(obj.safety_traj)
