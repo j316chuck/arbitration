@@ -55,6 +55,7 @@ classdef ReachAvoidPlanner < handle
             obj.extraArgs.plotData.plotDims = [1 1 0];
             obj.extraArgs.plotData.projpt = xstart(3);
             obj.extraArgs.projDim = [1 1 0];
+            obj.extraArgs.stopConvergeTTR = false;
             % Solve 
             [obj.data, obj.data_tau, ~] = ...
                 HJIPDE_solve(obj.goal_map, obj.tau, obj.schemeData, 'minVWithL', obj.extraArgs);          

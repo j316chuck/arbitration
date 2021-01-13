@@ -42,18 +42,20 @@ function output_analysis()
 %     };
 %     results_folder = './old_outputs/option_1_5_prob_control/results/';
 
-    %% Option 2
-    path = './outputs/';
-    exp_types = {
-        'blending_scheme_value_blend_safety_control_traj_replan_dt_1.500_spline_obs_weight_1.000000',
-         'blending_scheme_value_blend_safety_value_traj_replan_dt_1.500_spline_obs_weight_1.000000', 
-    };
-    results_folder = './outputs/results';
-    if ~exist(results_folder, 'dir')
-        mkdir(results_folder); 
-    end 
+%     %% Option 2
+
+%     path = './outputs/';
+%     exp_types = {
+%         'blending_scheme_value_blend_safety_control_traj_replan_dt_1.500_spline_obs_weight_1.000000',
+%          'blending_scheme_value_blend_safety_value_traj_replan_dt_1.500_spline_obs_weight_1.000000', 
+%     };
+%     results_folder = './outputs/results';
+%     if ~exist(results_folder, 'dir')
+%         mkdir(results_folder); 
+%     end 
     %% Option 4
-%     path = './old_outputs/option_4_triangle';
+%     repo = what('arbitration');
+%     path = strcat(repo.path, '/old_outputs/option_4_triangle');
 %     exp_types = {
 %         'blending_scheme_replan_waypoint_replan_dt_1.500_zero_level_set_0.200_replan_level_set_0.500_spline_obs_weight_1.000000_max_num_candidates_10.000000', ...
 %     };
@@ -61,6 +63,18 @@ function output_analysis()
 %     if ~exist(results_folder, 'dir')
 %         mkdir(results_folder); 
 %     end 
+
+
+    %% Option 2
+    repo = what('arbitration');
+    path = strcat(repo.path,'/outputs/');
+    exp_types = {
+        'blending_scheme_time_varying_value_blend_safety_control_traj_replan_dt_1.500_spline_obs_weight_1.000000'
+    };
+    results_folder = strcat(repo.path, '/outputs/results');
+    if ~exist(results_folder, 'dir')
+        mkdir(results_folder); 
+    end 
 
     %% Get All Experiment Results Data
     Nt = length(exp_types); 

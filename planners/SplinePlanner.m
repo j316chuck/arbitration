@@ -356,15 +356,16 @@ classdef SplinePlanner < handle
         %   and the blending is via the value function:
         %       alpha(x_t) = V^safe(x_t)
         %  
-        function opt_spline = replan_with_value_blending(obj, start, ...
+        function [opt_spline, opt_alphas] = replan_with_value_blending(obj, start, ...
                                                         traj_xs, traj_ys, ...
                                                         safe_xs, safe_ys, ...
-                                                        brs_planner, alpha)
+                                                        brs_planner)
             obj.start = start;
             obj.replan_scores = zeros(5, 0);
             
             opt_reward = 100000000000000.0;
-            opt_spline = {};        
+            opt_spline = {}; 
+            opt_alphas = [];
             
             for ti=1:length(obj.disc_3d) 
                 candidate_goal = obj.disc_3d(ti, :);
@@ -404,22 +405,23 @@ classdef SplinePlanner < handle
                     % Compute weighted plan-relevant part of objective: 
                     %   alpha(x_t) * || x_t - x^plan_t || for all times
                     replan_dist = alphas_along_spline .* obj.l2_dist(spline_xs(:), traj_xs(:), spline_ys(:), traj_ys(:));
-                    replan_cost = sum(replan_dist); % TODO: this may be unnecessary
+                    replan_cost = sum(replan_dist);
                     
                     % Compute weighted safety-relevant part of objective: 
                     %   (1 - alpha(x_t)) * || x_t - x^safe_t|| for all times
                     safety_dist = (1 - alphas_along_spline) .* obj.l2_dist(spline_xs(:), safe_xs(:), spline_ys(:), safe_ys(:));
-                    safety_cost = sum(safety_dist); 
+                    safety_cost = sum(safety_dist);
                     
                     % Compute the total objective summed over time.
-                    reward = sum(replan_dist + safety_dist);
+                    reward = replan_cost + safety_cost;
                     
                     replan_score = [candidate_goal(1); candidate_goal(2); safety_cost; replan_cost; reward];
                     obj.replan_scores = [obj.replan_scores, replan_score];
                     
                     if (reward < opt_reward)
                         opt_reward = reward;
-                        opt_spline = curr_spline;                        
+                        opt_spline = curr_spline;    
+                        opt_alphas = alphas_along_spline;
                     end
                 else 
                     replan_score = [candidate_goal(1); candidate_goal(2); -5; -5; -5];

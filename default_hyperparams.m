@@ -1,8 +1,9 @@
 function [params] = default_hyperparams()
     % env
     params.map_basename = 'bookstore';
-    params.map_yaml = 'maps/bookstore.yaml';
-    params.map_name = 'maps/bookstore.png';
+    repo = what('arbitration');
+    params.map_yaml = strcat(repo.path, '/maps/bookstore.yaml');
+    params.map_name = strcat(repo.path, '/maps/bookstore.png');
     params.gmin_3d = [-10; -10; -pi];
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [41; 41; 16];
@@ -19,7 +20,7 @@ function [params] = default_hyperparams()
     params.num_waypts = 50;
     params.horizon = 5;
     % blending params
-    params.blending_scheme =  'value_blend_safety_control_traj'; %'replan_waypoint'; %'probabilistic_blend_safety_control_traj'; %'switch'; 
+    params.blending_scheme = 'time_varying_value_blend_safety_control_traj'; %'mean_value_blend_safety_control_traj'; %'replan_waypoint'; %'probabilistic_blend_safety_control_traj'; %'switch'; 
     params.replan_dt = 1.5;
     params.zero_level_set = 0.1;
     params.replan_level_set = 0.3; 
@@ -32,7 +33,8 @@ function [params] = default_hyperparams()
     params.use_safe_orig_traj = true; 
     %params.blend_function = @(v) max(min(1, 1-(v/params.temperature)), 0);
     params.spline_obs_weight = 1; 
-    params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight); %option 1 alpha
+    params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight); %option 2 alpha
+    %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight); %option 1 alpha
     %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); %option 0 switch 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight); %option 1 alpha
     %params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_use_safe_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.use_safe_orig_traj, params.zero_level_set, params.spline_obs_weight); %option 1.5 probabilistic alpha

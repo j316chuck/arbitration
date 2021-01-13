@@ -59,7 +59,9 @@ classdef Planner < handle
             start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
             goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 
             obj.exp_name = sprintf("%s_map_%s_%s_blending_scheme_%s_%s", exp.map_basename, start_str, goal_str, exp.blending.scheme, exp.hyperparam_str); 
-            obj.output_folder = sprintf("outputs/%s", obj.exp_name); 
+            
+            repo = what('arbitration');
+            obj.output_folder = strcat(repo.path, "/outputs/", obj.exp_name);
             obj.plot_level = obj.exp.plot_level;
             obj.orig_traj = zeros(0, 5);
             obj.blend_traj = [];
@@ -71,12 +73,15 @@ classdef Planner < handle
                 mkdir(obj.output_folder); 
             end
             
+            repo = what('arbitration');
             if exp.run_brs
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
                 brs_planner = obj.brs_planner;
-                save('./data/brs_planner.mat', 'brs_planner'); 
+                filename = strcat(repo.path, '/data/brs_planner.mat');
+                save(filename, 'brs_planner'); 
             else
-                load('./data/brs_planner.mat'); 
+                filename = strcat(repo.path, '/data/brs_planner.mat');
+                load(filename); 
                 obj.brs_planner = brs_planner;
             end 
             
@@ -213,7 +218,7 @@ classdef Planner < handle
                           if ~blended_traj
                               obj.use_modified_safe_orig_traj_in_next_mpc_plan(next_orig_traj);
                           end 
-                      elseif strcmp(obj.exp.blending.scheme, 'value_blend_safety_value_traj') 
+                      elseif strcmp(obj.exp.blending.scheme, 'mean_value_blend_safety_value_traj') 
                           avg_safety_score = mean(obj.get_mpc_traj_safety_scores(plan)); 
                           alpha = max(min(avg_safety_score, 1), 0); 
                           fprintf("Alpha chosen: %f, safety score %f\n", alpha, avg_safety_score); 
@@ -221,13 +226,24 @@ classdef Planner < handle
                           blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
-                      elseif strcmp(obj.exp.blending.scheme, 'value_blend_safety_control_traj')
+                      elseif strcmp(obj.exp.blending.scheme, 'mean_value_blend_safety_control_traj')
                           avg_safety_score = mean(obj.get_mpc_traj_safety_scores(plan)); 
                           alpha = max(min(avg_safety_score, 1), 0); 
                           fprintf("Alpha chosen: %f, safety score %f\n", alpha, avg_safety_score); 
                           new_plan = obj.spline_planner.replan_with_safety_controls(obj.state, plan{1}, plan{2}, next_safety_traj(1, :), next_safety_traj(2, :), alpha);    
                           blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
+                          obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+                      elseif strcmp(obj.exp.blending.scheme, 'time_varying_value_blend_safety_control_traj')
+                          [new_plan, new_alphas] = obj.spline_planner.replan_with_value_blending(obj.state, ...
+                                                        plan{1}, ...
+                                                        plan{2}, ...
+                                                        next_safety_traj(1, :), ...
+                                                        next_safety_traj(2, :), ...
+                                                        obj.brs_planner);
+                          next_blend_traj = [new_plan{1}; new_plan{2}; ...
+                                                new_plan{3}; new_plan{4}; ...
+                                                new_plan{5}; new_alphas'];  
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
                       end 
                       obj.plot_spline_replan(2);

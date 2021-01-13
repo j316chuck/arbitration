@@ -32,6 +32,7 @@ classdef BRSAvoidPlanner < handle
             obj.extraArgs.visualize = true;
             obj.extraArgs.plotData.plotDims = [1 1 0];
             obj.extraArgs.plotData.projpt = 0;
+            obj.extraArgs.stopConvergeTTR = false;
         end
         
         %% Solves the brs avoid problem

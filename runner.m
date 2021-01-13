@@ -5,12 +5,15 @@ function runner()
     %run_option_1_5_probabilistic_safety_traj_blend(N);
     %run_option_2_safety_value_blend_control_traj(N); 
     %run_option_2_safety_value_blend_value_traj(N); 
-    run_option_4_triangle_blend(N);
-    run_option_1_75_probabilistic_value_traj_blend(N); 
+    %run_option_4_triangle_blend(N);
+    %run_option_1_75_probabilistic_value_traj_blend(N); 
+    run_option_2_time_varying_value_blend_control_traj(N);
 end
 
 function run_option_0_switch_blend_baselines(N)
-    load('./data/sampled_goals.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
     failed_exps = {}; 
     weights = [1, 10];
     zlsets = [0.1, 0.2];
@@ -45,7 +48,9 @@ function run_option_0_switch_blend_baselines(N)
 end 
 
 function run_option_1_safety_traj_blend(N)
-    load('./data/sampled_goals.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
     failed_exps = {}; 
     alphas = [0.4, 0.6, 0.8]; 
     for j = 1:3
@@ -79,7 +84,9 @@ function run_option_1_safety_traj_blend(N)
 end 
 
 function run_option_1_5_probabilistic_safety_traj_blend(N)
-    load('./data/sampled_goals.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
     failed_exps = {}; 
     use_safety_traj = {false, true};
     for j = 1:2
@@ -114,7 +121,9 @@ function run_option_1_5_probabilistic_safety_traj_blend(N)
 end 
 
 function run_option_1_75_probabilistic_value_traj_blend(N)
-    load('./data/sampled_goals.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
     failed_exps = {}; 
     for i = 1:N
         pb.exp_name = 'tmp';
@@ -142,7 +151,9 @@ function run_option_1_75_probabilistic_value_traj_blend(N)
 end 
 
 function run_option_2_safety_value_blend_control_traj(N)
-    load('./data/sampled_goals.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
     failed_exps = {}; 
     for i = 1:N
         pb.exp_name = 'tmp';
@@ -168,7 +179,9 @@ end
 
 
 function run_option_2_safety_value_blend_value_traj(N)
-    load('./data/sampled_goals.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
     failed_exps = {}; 
     for i = 1:N
         pb.exp_name = 'tmp';
@@ -193,7 +206,9 @@ function run_option_2_safety_value_blend_value_traj(N)
 end 
 
 function run_option_4_triangle_blend(N)
-    load('./data/sampled_goals.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
     failed_exps = {}; 
     zlsets = [0.2; 0.1];
     replan_sets = [0.5; 0.35]; 
@@ -224,4 +239,35 @@ function run_option_4_triangle_blend(N)
             save('runner.mat');
         end
     end 
+end 
+
+function run_option_2_time_varying_value_blend_control_traj(N)
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename);
+    failed_exps = {}; 
+    for i = 1:N
+        pb.exp_name = 'tmp';
+        
+        tic; 
+        close all;
+        params = default_hyperparams();
+        params.blending_scheme = 'time_varying_value_blend_safety_control_traj'; 
+        params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", ...
+            params.replan_dt, params.spline_obs_weight); 
+        s = starts(i, :); 
+        g = goals(i, :); 
+        params.start = s';
+        params.goal = goals(i, :)';
+        exp = load_exp(params); 
+        pb = Planner(exp); 
+        pb.blend_mpc_traj(); 
+        fprintf("Time: %f (sec) Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n", ...
+            num2str(toc), s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
+
+        %fprintf("Failed %s\n", pb.exp_name); 
+        %failed_exps{end+1} = pb.exp_name;
+
+        save('runner.mat');
+    end
 end 

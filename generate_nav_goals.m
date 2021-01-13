@@ -3,7 +3,9 @@ function [starts, goals] = generate_nav_goals(N, min_dist, regen_points)
         p = default_hyperparams();
         generate_nav_points(p);
     end 
-    load('./data/sampled_points.mat');
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_points.mat');
+    load(filename);
     xs = sampled_points(1, :);
     ys = sampled_points(2, :);
     ths = sampled_points(3, :);
@@ -32,7 +34,7 @@ function [starts, goals] = generate_nav_goals(N, min_dist, regen_points)
         goals = [goals; ngoals];
         counts = size(starts, 1);
     end 
-    save('./data/sampled_goals.mat', 'starts', 'goals');
+    save(strcat(repo.path,'/data/sampled_goals.mat'), 'starts', 'goals');
 end 
  
 function d = l2_dist(x1, x2, y1, y2)
@@ -134,8 +136,10 @@ function [sampled_points] = generate_nav_points(params)
     ylabel('y (meters)');
     legend('Location', 'NorthWest');
     title('Sampled Points');
-    save('./data/sampled_points.mat', 'sampled_points')
-    savefig('./data/sampled_points.fig');
+    
+    repo = what('arbitration');
+    save(strcat(repo.path,'/data/sampled_points.mat'), 'sampled_points');
+    savefig(strcat(repo.path,'/data/sampled_points.fig'));
 end 
 
 

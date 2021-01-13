@@ -1,7 +1,7 @@
 function test_blender()
     close all;
     params = default_hyperparams();
-    params.run_planner = true;
+    %params.run_planner = false;
     exp = load_exp(params);
     pb = Planner(exp);
     %pb.blend_mpc_controls();
