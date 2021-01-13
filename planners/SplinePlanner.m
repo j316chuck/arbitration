@@ -431,7 +431,7 @@ classdef SplinePlanner < handle
             contour(gxs, gys, obj.binary_occ_map, [0 0]);
             colormap(gca, 'jet');
             hcb2 = colorbar;
-            title("Safety Cost");
+            title("Safety Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)"); 
             subplot(2, 2, 3); 
@@ -442,7 +442,7 @@ classdef SplinePlanner < handle
             contour(gxs, gys, obj.binary_occ_map, [0 0]);
             colormap(gca, 'jet');
             hcb2 = colorbar;
-            title("Replan Cost");
+            title("Replan Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)"); 
             subplot(2, 2, 4); 
@@ -453,7 +453,7 @@ classdef SplinePlanner < handle
             contour(gxs, gys, obj.binary_occ_map, [0 0]);
             colormap(gca,'jet');
             hcb2 = colorbar;
-            title("Alpha Blend Cost");
+            title("Alpha Blend Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)");
             if ~isempty(savefig_path)

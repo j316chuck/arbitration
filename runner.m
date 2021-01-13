@@ -3,10 +3,10 @@ function runner()
     %run_option_0_switch_blend_baselines(N);
     %run_option_1_safety_traj_blend(N);
     %run_option_1_5_probabilistic_safety_traj_blend(N);
-    run_option_2_safety_value_blend_control_traj(N); 
-    run_option_2_safety_value_blend_value_traj(N); 
-    run_option_1_75_probabilistic_value_traj_blend(N); 
+    %run_option_2_safety_value_blend_control_traj(N); 
+    %run_option_2_safety_value_blend_value_traj(N); 
     run_option_4_triangle_blend(N);
+    run_option_1_75_probabilistic_value_traj_blend(N); 
 end
 
 function run_option_0_switch_blend_baselines(N)
@@ -198,7 +198,7 @@ function run_option_4_triangle_blend(N)
     zlsets = [0.2; 0.1];
     replan_sets = [0.5; 0.35]; 
     for j = 1:2
-        for i = 2:N
+        for i = 1:N
             pb.exp_name = 'tmp';
             try 
                 tic; 
