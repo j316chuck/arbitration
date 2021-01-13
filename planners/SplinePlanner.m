@@ -91,8 +91,8 @@ classdef SplinePlanner < handle
             all_rewards = [];
             plt_handles = {};
             
-            for ti=1:length(obj.disc_2d) 
-                candidate_goal = obj.disc_2d(ti, :);
+            for ti=1:length(obj.disc_3d) 
+                candidate_goal = obj.disc_3d(ti, :);
                 
                 % ignore candidate goals inside obstacles.
                 if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
@@ -100,7 +100,7 @@ classdef SplinePlanner < handle
                 end
                 
                 % orientation should match with goal final vel ~= 0.
-                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
+                candidate_goal = [candidate_goal,  0.01]; %[candidate_goal, 0.01];
                 
                 % Compute spline from start to candidate (x,y) goal.
                 curr_spline = ...
@@ -146,8 +146,8 @@ classdef SplinePlanner < handle
             opt_reward = 100000000000000.0;
             opt_spline = {};        
             
-            for ti=1:length(obj.disc_2d) 
-                candidate_goal = obj.disc_2d(ti, :);
+            for ti=1:length(obj.disc_3d) 
+                candidate_goal = obj.disc_3d(ti, :);
                 
                 % ignore candidate goals inside obstacles.
                 if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
@@ -155,7 +155,7 @@ classdef SplinePlanner < handle
                 end
                 
                 % orientation should match with goal final vel ~= 0.
-                candidate_goal = [candidate_goal, obj.goal(3), 0.01]; %[candidate_goal, 0.01];
+                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
                 
                 % Compute spline from start to candidate (x,y) goal.
                 curr_spline = ...
@@ -405,11 +405,10 @@ classdef SplinePlanner < handle
         function plot_replan_scores(obj, savefig_path)
             opt_xs = obj.opt_spline{1}; opt_ys = obj.opt_spline{2};
             sx = opt_xs(1); sy = opt_ys(1); gx = opt_xs(end); gy = opt_ys(end);
-            xs = obj.replan_scores(1, :); 
-            ys = obj.replan_scores(2, :); 
-            safety_cost = reshape(obj.replan_scores(3, :), size(obj.x2d));
-            replan_cost = reshape(obj.replan_scores(4, :), size(obj.x2d));
-            reward = reshape(obj.replan_scores(5, :), size(obj.x2d));
+            N = numel(obj.x2d); 
+            safety_cost = reshape(obj.replan_scores(3, 1:N), size(obj.x2d));
+            replan_cost = reshape(obj.replan_scores(4, 1:N), size(obj.x2d));
+            reward = reshape(obj.replan_scores(5, 1:N), size(obj.x2d));
             figure(6); 
             clf; 
             gxs = obj.grid_2d.xs{1}; gys = obj.grid_2d.xs{2};

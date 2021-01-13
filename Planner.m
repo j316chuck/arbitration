@@ -166,14 +166,12 @@ classdef Planner < handle
                       if strcmp(obj.exp.blending.scheme, 'blend_safety_value_traj') 
                           alpha = obj.blending.alpha;
                           new_plan = obj.spline_planner.replan_with_brs_planner(obj.state, plan{1}, plan{2}, obj.brs_planner, alpha);
-                          %new_plan = obj.truncate_plan_with_replan_time(new_plan);
                           blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
                       elseif strcmp(obj.exp.blending.scheme, 'blend_safety_control_traj')
                           alpha = obj.blending.alpha;
                           new_plan = obj.spline_planner.replan_with_safety_controls(obj.state, plan{1}, plan{2}, next_safety_traj(1, :), next_safety_traj(2, :), alpha);    
-                          %new_plan = obj.truncate_plan_with_replan_time(new_plan);
                           blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
                           next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
@@ -214,8 +212,23 @@ classdef Planner < handle
                           end             
                           if ~blended_traj
                               obj.use_modified_safe_orig_traj_in_next_mpc_plan(next_orig_traj);
-                              %obj.use_safety_traj_in_next_mpc_plan(next_safety_traj)
                           end 
+                      elseif strcmp(obj.exp.blending.scheme, 'value_blend_safety_value_traj') 
+                          avg_safety_score = mean(obj.get_mpc_traj_safety_scores(plan)); 
+                          alpha = max(min(avg_safety_score, 1), 0); 
+                          fprintf("Alpha chosen: %f, safety score %f\n", alpha, avg_safety_score); 
+                          new_plan = obj.spline_planner.replan_with_brs_planner(obj.state, plan{1}, plan{2}, obj.brs_planner, alpha);
+                          blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
+                          next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
+                          obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
+                      elseif strcmp(obj.exp.blending.scheme, 'value_blend_safety_control_traj')
+                          avg_safety_score = mean(obj.get_mpc_traj_safety_scores(plan)); 
+                          alpha = max(min(avg_safety_score, 1), 0); 
+                          fprintf("Alpha chosen: %f, safety score %f\n", alpha, avg_safety_score); 
+                          new_plan = obj.spline_planner.replan_with_safety_controls(obj.state, plan{1}, plan{2}, next_safety_traj(1, :), next_safety_traj(2, :), alpha);    
+                          blend_alpha = (ones(length(new_plan{1}), 1) * alpha)';
+                          next_blend_traj = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; blend_alpha];
+                          obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
                       end 
                       obj.plot_spline_replan(2);
                       obj.verbose_plot(2);
@@ -233,6 +246,14 @@ classdef Planner < handle
             end 
         end
                 
+        function safety_scores = get_mpc_traj_safety_scores(obj, plan)
+            safety_scores = zeros(obj.num_mpc_steps, 1); 
+            for i = 1:obj.num_mpc_steps
+                x = [plan{1}(i), plan{2}(i), plan{3}(i)]; 
+                safety_scores(i) = obj.brs_planner.get_value(x); 
+            end 
+        end 
+        
         function [opt_traj] = replan_after_every_k_timestamps_with_safety_controls(obj, plan)
               if isempty(plan)
                   opt_traj = plan;

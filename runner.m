@@ -2,7 +2,10 @@ function runner()
     N = 10; 
     %run_option_0_switch_blend_baselines(N);
     %run_option_1_safety_traj_blend(N);
-    run_option_1_5_probabilistic_safety_traj_blend(N);
+    %run_option_1_5_probabilistic_safety_traj_blend(N);
+    run_option_2_safety_value_blend_control_traj(N); 
+    run_option_2_safety_value_blend_value_traj(N); 
+    run_option_1_75_probabilistic_value_traj_blend(N); 
     run_option_4_triangle_blend(N);
 end
 
@@ -45,7 +48,7 @@ function run_option_1_safety_traj_blend(N)
     load('./data/sampled_goals.mat');
     failed_exps = {}; 
     alphas = [0.4, 0.6, 0.8]; 
-    for j = 1:4
+    for j = 1:3
         for i = 1:N
             pb.exp_name = 'tmp';
             try
@@ -108,6 +111,85 @@ function run_option_1_5_probabilistic_safety_traj_blend(N)
             save('runner.mat');
         end
     end 
+end 
+
+function run_option_1_75_probabilistic_value_traj_blend(N)
+    load('./data/sampled_goals.mat');
+    failed_exps = {}; 
+    for i = 1:N
+        pb.exp_name = 'tmp';
+        tic; 
+        close all;
+        params = default_hyperparams();
+        params.blending_scheme =  'probabilistic_blend_safety_value_traj'; 
+        params.run_planner=true;
+        params.alpha = 0.2; 
+        params.spline_obs_weight = 1;
+        params.num_alpha_samples = 20; 
+        params.zero_level_set = 0.2;
+        params.use_safe_orig_traj = true; 
+        params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_use_safe_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.use_safe_orig_traj, params.zero_level_set, params.spline_obs_weight); %option 1.5 probabilistic alpha
+        s = starts(i, :); 
+        g = goals(i, :); 
+        params.start = s';
+        params.goal = goals(i, :)';
+        exp = load_exp(params);
+        pb = Planner(exp); 
+        pb.blend_mpc_traj(); 
+        fprintf("Time: %f (sec) Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n", num2str(toc), s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
+        save('runner.mat');
+    end
+end 
+
+function run_option_2_safety_value_blend_control_traj(N)
+    load('./data/sampled_goals.mat');
+    failed_exps = {}; 
+    for i = 1:N
+        pb.exp_name = 'tmp';
+        tic; 
+        close all;
+        params = default_hyperparams();
+        params.blending_scheme =  'value_blend_safety_control_traj'; 
+        params.run_planner = true;
+        params.alpha = 0.2; 
+        params.spline_obs_weight = 1;
+        params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight); %option 2 value
+        s = starts(i, :); 
+        g = goals(i, :); 
+        params.start = s';
+        params.goal = goals(i, :)';
+        exp = load_exp(params);
+        pb = Planner(exp); 
+        pb.blend_mpc_traj(); 
+        fprintf("Time: %f (sec) Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n", num2str(toc), s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
+        save('runner.mat');
+    end
+end 
+
+
+function run_option_2_safety_value_blend_value_traj(N)
+    load('./data/sampled_goals.mat');
+    failed_exps = {}; 
+    for i = 1:N
+        pb.exp_name = 'tmp';
+        tic; 
+        close all;
+        params = default_hyperparams();
+        params.blending_scheme =  'value_blend_safety_value_traj'; 
+        params.run_planner = true;
+        params.alpha = 0.2; 
+        params.spline_obs_weight = 1;
+        params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight); %option 2 value
+        s = starts(i, :); 
+        g = goals(i, :); 
+        params.start = s';
+        params.goal = goals(i, :)';
+        exp = load_exp(params);
+        pb = Planner(exp); 
+        pb.blend_mpc_traj(); 
+        fprintf("Time: %f (sec) Start: [%.2f %.2f %.2f] End: [%.2f %.2f %.2f] Result: %d\n", num2str(toc), s(1), s(2), s(3), g(1), g(2), g(3), pb.termination_state); 
+        save('runner.mat');
+    end
 end 
 
 function run_option_4_triangle_blend(N)
