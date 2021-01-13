@@ -7,16 +7,60 @@ function output_analysis()
     % prints out a high level summary of the metrics of each experiment
     
     %% Edit these variables for different experiment types (separated by folder name)
+    %% Option 0 Baseline
+%     path = './old_outputs/option_0_switch_baseline';
+%     exp_types = {
+%         'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_10.00', ...
+%         'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_1.00', ...
+%         'switch_replan_dt_1.500_zero_level_set_0.100_spline_obs_weight_10.00', ...
+%         'switch_replan_dt_1.500_zero_level_set_0.100_spline_obs_weight_1.00', ...
+%     };
+%     results_folder = './old_outputs/option_0_switch_baseline/results/';
+    %% Option 0 Fine Tuned Planner Baseline
+%     path = './old_outputs/option_0_switch_baseline_fine_tune_planner';
+%     exp_types = {
+%         'switch_replan_dt_1.500_fine_tuned_spline_planner_zero_level_set_0.200_spline_obs_weight_10.00', ...
+%         'switch_replan_dt_1.500_fine_tuned_spline_planner_zero_level_set_0.200_spline_obs_weight_1.00', ...
+%         'switch_replan_dt_1.500_fine_tuned_spline_planner_zero_level_set_0.100_spline_obs_weight_10.00', ...
+%         'switch_replan_dt_1.500_fine_tuned_spline_planner_zero_level_set_0.100_spline_obs_weight_1.00', ...
+%     };
+%     results_folder = './old_outputs/option_0_switch_baseline_fine_tune_planner/results/';
+    %% Option 1
+%     path = './old_outputs/option_1_alpha';
+%     exp_types = {
+%         'blending_scheme_blend_safety_control_traj_replan_dt_1.500_alpha_value_0.800_spline_obs_weight_1.000000', ...
+%         'blending_scheme_blend_safety_control_traj_replan_dt_1.500_alpha_value_0.600_spline_obs_weight_1.000000', ...
+%         'blending_scheme_blend_safety_control_traj_replan_dt_1.500_alpha_value_0.400_spline_obs_weight_1.000000', ...
+%         'blending_scheme_blend_safety_control_traj_replan_dt_1.500_alpha_value_0.200_spline_obs_weight_1.000000', ...
+%     };
+%     results_folder = './old_outputs/option_1_alpha/results/';
+    %% Option 1_5
+%     path = './old_outputs/option_1_5_prob_control';
+%     exp_types = {
+%         'blending_scheme_probabilistic_blend_safety_control_traj_replan_dt_1.500_num_samples_20_use_safe_1_level_set_0.20_spline_obs_weight_1.000000', ...
+%         'blending_scheme_probabilistic_blend_safety_control_traj_replan_dt_1.500_num_samples_20_use_safe_0_level_set_0.20_spline_obs_weight_1.000000', ...
+%     };
+%     results_folder = './old_outputs/option_1_5_prob_control/results/';
+
+    %% Option 2
     path = './outputs/';
     exp_types = {
-        %'probabilistic_blend_safety_control_traj_replan_dt_1.500_num_samples_10_level_set_0.20', ... 
-        %'switch_replan_dt_1.500_zero_level_set_0.10'
-        'switch_replan_dt_1.500_zero_level_set_0.200_spline_obs_weight_1.000000', ...
+        'blending_scheme_value_blend_safety_control_traj_replan_dt_1.500_spline_obs_weight_1.000000',
+         'blending_scheme_value_blend_safety_value_traj_replan_dt_1.500_spline_obs_weight_1.000000', 
     };
-    results_folder = './outputs/initial_results/';
+    results_folder = './outputs/results';
     if ~exist(results_folder, 'dir')
         mkdir(results_folder); 
     end 
+    %% Option 4
+%     path = './old_outputs/option_4_triangle';
+%     exp_types = {
+%         'blending_scheme_replan_waypoint_replan_dt_1.500_zero_level_set_0.200_replan_level_set_0.500_spline_obs_weight_1.000000_max_num_candidates_10.000000', ...
+%     };
+%     results_folder = './old_outputs/option_4_triangle/results/';
+%     if ~exist(results_folder, 'dir')
+%         mkdir(results_folder); 
+%     end 
 
     %% Get All Experiment Results Data
     Nt = length(exp_types); 
@@ -36,7 +80,7 @@ function output_analysis()
                 exp_name = fullfile(s.folder, s.name); 
                 f = fullfile(exp_name, 'final_state.mat'); 
                 names = all_exp_names{eti};
-                names{length(names)+1} = exp_name; 
+                names{end+1} = exp_name; 
                 all_exp_names{eti} = names;
                 metrics = all_exp_metrics{eti}; 
                 if isfile(f)
@@ -55,17 +99,17 @@ function output_analysis()
                                 total_time; ... 
                                 num_safety_control; ...
                                 obj.termination_state
-                              ]; 
-                    metrics(length(metrics)+1, :) = metric; 
-%                     debugging failed cases 
-%                     if obj.termination_state == 1
-%                         fprintf("Crashed exp: %s\n", exp_name);  
-%                     end 
-%                     if obj.termination_state == 2
-%                         fprintf("Tle exp: %s\n", exp_name);  
-%                     end 
+                              ];
+                    metrics(end+1, :) = metric; 
+                    % debugging failed cases 
+                    if obj.termination_state == 1
+                        fprintf("Crashed exp: %s\n", exp_name);  
+                    end 
+                    if obj.termination_state == 2
+                        fprintf("Tle exp: %s\n", exp_name);  
+                    end 
                 else 
-                    metrics(length(metrics)+1, :) = -ones(7, 1)' * 1; 
+                    metrics(end+1, :) = -ones(7, 1)' * 1; 
                     fprintf("Failed exp: %s\n", exp_name); 
                 end 
                 all_exp_metrics{eti} = metrics;
@@ -89,32 +133,32 @@ function output_analysis()
     
     %% Print summary statistics
     for i = 1:Nt
-        exp_type = exp_types{eti};
-        exp_metrics = all_exp_metrics{eti};  
-        alj = sum(exp_metrics(:, 1));
+        exp_type = exp_types{i};
+        exp_metrics = all_exp_metrics{i};  
+        alj = mean(exp_metrics(:, 1));
         slj = std(exp_metrics(:, 1)); 
         fprintf("Exp: %s avg lin jerk: %f std: %f\n", exp_type, alj, slj);
-        aaj = sum(exp_metrics(:, 2));
+        aaj = mean(exp_metrics(:, 2));
         saj = std(exp_metrics(:, 2)); 
         fprintf("Exp: %s avg ang jerk: %f std: %f\n", exp_type, aaj, saj);
-        assh = sum(exp_metrics(:, 3));
+        assh = mean(exp_metrics(:, 3));
         sssh = std(exp_metrics(:, 3)); 
         fprintf("Exp: %s avg safety_score: %f std: %f\n", exp_type, assh, sssh); 
-        adot = sum(exp_metrics(:, 4));
+        adot = mean(exp_metrics(:, 4));
         sdot = std(exp_metrics(:, 4)); 
         fprintf("Exp: %s avg dist to opt traj: %f std: %f\n", exp_type, adot, sdot); 
-        ati = sum(exp_metrics(:, 5));
+        ati = mean(exp_metrics(:, 5));
         sti = std(exp_metrics(:, 5)); 
         fprintf("Exp: %s avg time taken: %f std: %f\n", exp_type, ati, sti); 
-        ans = sum(exp_metrics(:, 6));
+        asst = mean(exp_metrics(:, 6));
         sns = std(exp_metrics(:, 6)); 
-        fprintf("Exp: %s avg num safety controls taken: % std: %f\n", exp_type, ans, sns); 
+        fprintf("Exp: %s avg num safety controls taken: %f std: %f\n", exp_type, asst, sns); 
         termination = exp_metrics(:, 7);
         num_success = sum(termination == 0); 
         num_crashed = sum(termination == 1); 
         num_tle = sum(termination == 2); 
         num_error = sum(termination == -1); 
-        total_exp = total_exp_num(i);
+        total_exp = num_success + num_crashed + num_tle + num_error;
         fprintf("Exp: %s %d/%d reached goal\n", exp_type, num_success, total_exp);
         fprintf("Exp: %s %d/%d crashed\n", exp_type, num_crashed, total_exp);
         fprintf("Exp: %s %d/%d ran out of time\n", exp_type, num_tle, total_exp);

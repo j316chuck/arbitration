@@ -3,9 +3,9 @@ function runner()
     %run_option_0_switch_blend_baselines(N);
     %run_option_1_safety_traj_blend(N);
     %run_option_1_5_probabilistic_safety_traj_blend(N);
-    %run_option_2_safety_value_blend_control_traj(N); 
-    %run_option_2_safety_value_blend_value_traj(N); 
-    run_option_4_triangle_blend(N);
+    %run_option_4_triangle_blend(N);
+    run_option_2_safety_value_blend_safety_traj(N); 
+    run_option_2_safety_value_blend_value_traj(N); 
     run_option_1_75_probabilistic_value_traj_blend(N); 
 end
 
@@ -125,7 +125,7 @@ function run_option_1_75_probabilistic_value_traj_blend(N)
         params.run_planner=true;
         params.alpha = 0.2; 
         params.spline_obs_weight = 1;
-        params.num_alpha_samples = 20; 
+        params.num_alpha_samples = 10; 
         params.zero_level_set = 0.2;
         params.use_safe_orig_traj = true; 
         params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_use_safe_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.use_safe_orig_traj, params.zero_level_set, params.spline_obs_weight); %option 1.5 probabilistic alpha
@@ -141,7 +141,7 @@ function run_option_1_75_probabilistic_value_traj_blend(N)
     end
 end 
 
-function run_option_2_safety_value_blend_control_traj(N)
+function run_option_2_safety_value_blend_value_traj(N)
     load('./data/sampled_goals.mat');
     failed_exps = {}; 
     for i = 1:N
@@ -149,11 +149,14 @@ function run_option_2_safety_value_blend_control_traj(N)
         tic; 
         close all;
         params = default_hyperparams();
-        params.blending_scheme =  'value_blend_safety_control_traj'; 
-        params.run_planner = true;
+        params.blending_scheme =  'value_blend_safety_value_traj'; 
+        params.run_planner=true;
         params.alpha = 0.2; 
         params.spline_obs_weight = 1;
-        params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight); %option 2 value
+        params.num_alpha_samples = 10; 
+        params.zero_level_set = 0.2;
+        params.use_safe_orig_traj = true; 
+        params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_use_safe_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.use_safe_orig_traj, params.zero_level_set, params.spline_obs_weight); %option 1.5 probabilistic alpha
         s = starts(i, :); 
         g = goals(i, :); 
         params.start = s';
@@ -166,8 +169,7 @@ function run_option_2_safety_value_blend_control_traj(N)
     end
 end 
 
-
-function run_option_2_safety_value_blend_value_traj(N)
+function run_option_2_safety_value_blend_safety_traj(N)
     load('./data/sampled_goals.mat');
     failed_exps = {}; 
     for i = 1:N
@@ -175,11 +177,14 @@ function run_option_2_safety_value_blend_value_traj(N)
         tic; 
         close all;
         params = default_hyperparams();
-        params.blending_scheme =  'value_blend_safety_value_traj'; 
-        params.run_planner = true;
+        params.blending_scheme =  'probabilistic_blend_safety_value_traj'; 
+        params.run_planner=true;
         params.alpha = 0.2; 
         params.spline_obs_weight = 1;
-        params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight); %option 2 value
+        params.num_alpha_samples = 10; 
+        params.zero_level_set = 0.2;
+        params.use_safe_orig_traj = true; 
+        params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_use_safe_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.use_safe_orig_traj, params.zero_level_set, params.spline_obs_weight); %option 1.5 probabilistic alpha
         s = starts(i, :); 
         g = goals(i, :); 
         params.start = s';
@@ -198,7 +203,7 @@ function run_option_4_triangle_blend(N)
     zlsets = [0.2; 0.1];
     replan_sets = [0.5; 0.35]; 
     for j = 1:2
-        for i = 1:N
+        for i = 2:N
             pb.exp_name = 'tmp';
             try 
                 tic; 
