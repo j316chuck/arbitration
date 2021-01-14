@@ -24,13 +24,13 @@ classdef Planner < handle
         brs_planner
         spline_planner
         dynSys
-        exp_name
-        output_folder
-        plot_level
         orig_traj
         safety_traj
         blend_traj
         switch_traj
+        exp_name
+        output_folder
+        plot_level
         objective_str 
         scores
         termination_state
@@ -61,7 +61,12 @@ classdef Planner < handle
             obj.brs_planner = exp.brs_planner;
             obj.spline_planner = exp.spline_planner;
             obj.dynSys = obj.spline_planner.dynSys;
+            obj.orig_traj = zeros(0, 5); 
+            obj.safety_traj = zeros(0, 5);  
+            obj.blend_traj = zeros(0, 6);
+            obj.switch_traj = zeros(0, 5); 
             
+            % Logging information
             repo = what('arbitration');
             start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
             goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 
@@ -70,16 +75,12 @@ classdef Planner < handle
                 obj.blend_scheme, obj.control_scheme, exp.hyperparam_str); 
             obj.output_folder = strcat(repo.path, "/outputs/", obj.exp_name);
             obj.plot_level = obj.exp.plot_level;
-            obj.orig_traj = zeros(0, 5);
-            obj.blend_traj = [];
-            
             if exp.clear_dir && exist(obj.output_folder, 'dir')
                 rmdir(obj.output_folder, 's');
             end
             if ~exist(obj.output_folder, 'dir')
                 mkdir(obj.output_folder); 
             end
-            
             if exp.run_brs
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
                 brs_planner = obj.brs_planner;
@@ -187,18 +188,31 @@ classdef Planner < handle
                                                 new_plan{5}; new_alphas'];  
                           obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_blend_traj]; 
                       elseif strcmp(obj.blend_scheme, 'replan_waypoint')
-                          
+                          obj.replan_waypoint(plan); 
                       else 
                           warning("blending scheme not supported"); 
                           return 
                       end 
                   end 
                   obj.verbose_plot(2);
-                  %obj.plot_spline_cost(2); %add for spline planner visualization debugging
+                  %obj.plot_spline_cost(2); % spline planner debugging
                end 
                
                %% Low level mpc control
-               x = reshape(obj.state(1:3), [1, 3]);
+         
+               
+               %% State update
+               obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+               obj.dynSys.updateState(u, obj.dt, x'); 
+               obj.state = [obj.dynSys.x', u]; % new state and new control
+               obj.cur_timestamp = obj.cur_timestamp + 1;
+               obj.replan_time_counter = obj.replan_time_counter + obj.dt;
+            end 
+        end 
+        
+        % Low level mpc control
+        function [x, u, a] = apply_low_level_mpc_control() 
+             x = reshape(obj.state(1:3), [1, 3]);
                v = obj.brs_planner.get_value(x);
                u1 = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)];
                u2 = obj.brs_planner.get_avoid_u(x)';
@@ -221,14 +235,6 @@ classdef Planner < handle
                end
                assert(0 <= alpha && alpha <= 1);
                u = alpha * u1 + (1 - alpha) * u2;
-               
-               %% State update
-               obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
-               obj.dynSys.updateState(u, obj.dt, x'); 
-               obj.state = [obj.dynSys.x', u]; % new state and new control
-               obj.cur_timestamp = obj.cur_timestamp + 1;
-               obj.replan_time_counter = obj.replan_time_counter + obj.dt;
-            end 
         end 
         
         function [chosen_traj] = replan_waypoint(obj, plan)
@@ -573,7 +579,7 @@ classdef Planner < handle
                 blend_ys = obj.blend_traj(2, :); 
                 blend_ths = obj.blend_traj(3, :); 
                 use_avoid_probs = obj.blend_traj(6, :);
-                blend_name = obj.blending.scheme;
+                blend_name = obj.blend_scheme;
                 obj.plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
             end 
             % plot reach avoid traj

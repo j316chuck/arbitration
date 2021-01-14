@@ -107,9 +107,7 @@ classdef Planner < handle
         function blend_plans(obj)
             while 1 
                %% Termination condition for MPC
-               if obj.reached_max_timestamps() || obj.reached_goal() || obj.collided_with_obstacle()
-                  obj.verbose_plot(1);
-                  obj.save_state();
+               if obj.reach_stop_condition()
                   return;
                end 
                %% High level mpc planning
@@ -203,41 +201,60 @@ classdef Planner < handle
                       end 
                   end 
                   obj.verbose_plot(2);
-                  %obj.plot_spline_cost(2); %add for spline planner visualization debugging
+                  %obj.plot_spline_cost(2); % spline planner debugging
                end 
                
                %% Low level mpc control
-               x = reshape(obj.state(1:3), [1, 3]);
-               v = obj.brs_planner.get_value(x);
-               u1 = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)];
-               u2 = obj.brs_planner.get_avoid_u(x)';
-               if isequal(obj.control_scheme, 'follow') 
-                    alpha = obj.blend_traj(6, obj.cur_timestamp); 
-               elseif isequal(obj.control_scheme, 'switch')
-                   if obj.use_safety_control || obj.is_unsafe_state(v)
-                       obj.use_safety_control = true; 
-                       alpha = 0; 
-                   else 
-                       alpha = 1;
-                   end 
-               elseif isequal(obj.control_scheme, 'constant') 
-                   alpha = obj.blending.alpha;
-               elseif isequal(obj.control_scheme, 'distance')
-                   alpha = obj.blending.blend_function(v); 
-               else
-                   warning("control scheme not supported");  
-                   return
-               end
-               assert(0 <= alpha && alpha <= 1);
-               u = alpha * u1 + (1 - alpha) * u2;
-               
+               [x, u, alpha] = obj.get_control(); 
                %% State update
-               obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
-               obj.dynSys.updateState(u, obj.dt, x'); 
-               obj.state = [obj.dynSys.x', u]; % new state and new control
-               obj.cur_timestamp = obj.cur_timestamp + 1;
-               obj.replan_time_counter = obj.replan_time_counter + obj.dt;
+               obj.update_state(x, u, alpha);
             end 
+        end 
+        
+        % Stop Conditions
+        function stop = reach_stop_condition(obj)
+            if obj.reached_max_timestamps() || obj.reached_goal() || obj.collided_with_obstacle()
+                obj.verbose_plot(1);
+                obj.save_state();
+                stop = true;
+            else 
+                stop = false; 
+            end     
+        end 
+        
+        % Get low level mpc control at current timestamp
+        function [x, u, alpha] = get_control(obj) 
+            x = reshape(obj.state(1:3), [1, 3]);
+            v = obj.brs_planner.get_value(x);
+            u1 = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)];
+            u2 = obj.brs_planner.get_avoid_u(x)';
+            if isequal(obj.control_scheme, 'follow') 
+                alpha = obj.blend_traj(6, obj.cur_timestamp); 
+            elseif isequal(obj.control_scheme, 'switch')
+               if obj.use_safety_control || obj.is_unsafe_state(v)
+                   obj.use_safety_control = true; 
+                   alpha = 0; 
+               else 
+                   alpha = 1;
+               end 
+            elseif isequal(obj.control_scheme, 'constant') 
+               alpha = obj.blending.alpha;
+            elseif isequal(obj.control_scheme, 'distance')
+               alpha = obj.blending.blend_function(v); 
+            else
+               warning("control scheme not supported");  
+               return
+            end
+            assert(0 <= alpha && alpha <= 1);
+            u = alpha * u1 + (1 - alpha) * u2;
+        end 
+        
+        function update_state(obj, x, u, alpha) 
+            obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
+            obj.dynSys.updateState(u, obj.dt, x'); % update state
+            obj.state = [obj.dynSys.x', u]; % new state and new control
+            obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
+            obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
         end 
         
         function [chosen_traj] = replan_waypoint(obj, plan)
