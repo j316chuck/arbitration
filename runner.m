@@ -1,5 +1,6 @@
 function runner()
     N = 10; 
+    run_and_cache_reach_avoid_and_brs_planners(N); 
     %run_option_0_switch_blend_baselines(N);
     %run_option_1_safety_traj_blend(N);
     %run_option_1_5_probabilistic_safety_traj_blend(N);
@@ -7,13 +8,36 @@ function runner()
     %run_option_2_safety_value_blend_value_traj(N); 
     %run_option_4_triangle_blend(N);
     %run_option_1_75_probabilistic_value_traj_blend(N); 
-    run_option_2_time_varying_value_blend_control_traj(N);
+    %run_option_2_time_varying_value_blend_control_traj(N);
 end
+
+function run_and_cache_reach_avoid_and_brs_planners(N)
+    repo = what('arbitration');
+    filename = strcat(repo.path, '/data/sampled_goals.mat');
+    load(filename, 'starts', 'goals');
+    for i = 1:N
+        close all;
+        params = default_hyperparams();
+        params.run_planner = true; 
+        if i == 1 
+            params.run_brs = true;
+        else 
+            params.run_brs = false; 
+        end 
+        s = starts(i, :); 
+        g = goals(i, :); 
+        params.start = s';
+        params.goal = g';
+        exp = load_exp(params);
+        Planner(exp); % initialize exp and run reach avoid and brs planner
+    end 
+end 
+
 
 function run_option_0_switch_blend_baselines(N)
     repo = what('arbitration');
     filename = strcat(repo.path, '/data/sampled_goals.mat');
-    load(filename);
+    load(filename, 'starts', 'goals');
     failed_exps = {}; 
     weights = [1, 10];
     zlsets = [0.1, 0.2];

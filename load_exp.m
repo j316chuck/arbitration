@@ -139,9 +139,6 @@ function [exp] = load_exp(params)
     exp.clear_dir = params.clear_dir; 
     exp.run_planner = params.run_planner;     
     exp.run_brs = params.run_brs; 
-    exp.save_planner = params.save_planner; 
-    exp.load_planner = params.load_planner;
-    exp.save_blender = params.save_blender; 
     exp.save_plot = params.save_plot; 
     exp.plot_level = params.plot_level; 
 end 
