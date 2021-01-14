@@ -58,7 +58,8 @@ classdef Planner < handle
             obj.dynSys = obj.spline_planner.dynSys;
             start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
             goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 
-            obj.exp_name = sprintf("%s_map_%s_%s_blending_scheme_%s_%s", exp.map_basename, start_str, goal_str, exp.blending.scheme, exp.hyperparam_str); 
+            point_nav_str = sprintf("%s_map_%s_%s", exp.map_basename, start_str, goal_str); 
+            obj.exp_name = sprintf("%s_blending_scheme_%s_%s", point_nav_str, exp.blending.scheme, exp.hyperparam_str); 
             
             repo = what('arbitration');
             obj.output_folder = strcat(repo.path, "/outputs/", obj.exp_name);
@@ -81,20 +82,19 @@ classdef Planner < handle
                 save(filename, 'brs_planner'); 
             else
                 filename = strcat(repo.path, '/data/brs_planner.mat');
-                load(filename); 
+                load(filename, 'brs_planner'); 
                 obj.brs_planner = brs_planner;
             end 
             
             if exp.run_planner
-                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt); 
+                obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt);
+                reach_avoid_planner = obj.reach_avoid_planner;
+                filename = sprintf("%s/data/%s.mat", repo.path, point_nav_str); 
+                save(filename, 'reach_avoid_planner'); 
             else
-                save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
-                load(save_planner_file, 'obj'); 
-            end 
-            
-            if exp.save_planner
-                save_planner_file = sprintf("%s/run_planner.mat", obj.output_folder);
-                save(save_planner_file, 'obj');
+                filename =  sprintf("%s/data/%s.mat", repo.path, point_nav_str); 
+                load(filename, 'reach_avoid_planner');
+                obj.reach_avoid_planner = reach_avoid_planner;
             end 
         end
         

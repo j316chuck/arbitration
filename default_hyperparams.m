@@ -43,11 +43,8 @@ function [params] = default_hyperparams()
 
     % file path params
     params.clear_dir = false; 
-    params.run_planner = true; 
+    params.run_planner = false; 
     params.run_brs = false;
-    params.save_planner = true; 
-    params.load_planner = true;
-    params.save_blender = true; 
     params.save_plot = true; 
     params.plot_level = 2; %every iter, every replan, at the end, not at all
 end 
