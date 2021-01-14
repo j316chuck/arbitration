@@ -21,6 +21,7 @@ function [params] = default_hyperparams()
     params.horizon = 5;
     % blending params
     params.blending_scheme = 'time_varying_value_blend_safety_control_traj'; %'mean_value_blend_safety_control_traj'; %'replan_waypoint'; %'probabilistic_blend_safety_control_traj'; %'switch'; 
+    params.control_scheme = 'switch'; 
     params.replan_dt = 1.5;
     params.zero_level_set = 0.1;
     params.replan_level_set = 0.3; 
