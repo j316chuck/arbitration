@@ -241,6 +241,14 @@ classdef Planner < handle
                                                         next_safety_traj(1, :), ...
                                                         next_safety_traj(2, :), ...
                                                         obj.brs_planner);
+                          % ========== DEBUGGING! =========== %                          
+                          obj.plot_value_blended_traj(plan{1}, ...
+                                                        plan{2}, ...
+                                                        next_safety_traj(1, :), ...
+                                                        next_safety_traj(2, :), ...
+                                                        new_plan, new_alphas);
+                          % ========== DEBUGGING! =========== %   
+                                                    
                           next_blend_traj = [new_plan{1}; new_plan{2}; ...
                                                 new_plan{3}; new_plan{4}; ...
                                                 new_plan{5}; new_alphas'];  
@@ -699,6 +707,26 @@ classdef Planner < handle
             obj.plot_traj(traj(1, :), traj(2, :), traj(3, :), 'red', 'spline');
             scatter(v1(1), v1(2), 30, 'bo'); 
             scatter(v2(1), v2(2), 30, 'bo');
+        end 
+        
+        function plot_value_blended_traj(obj, plan_x, plan_y, safe_x, safe_y, blended_plan, alphas)
+            figure(7);
+            hold on;
+            
+            % Plot the background obstacles.
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0]);
+            
+            sp = scatter(plan_x, plan_y, 15, 'blue', 'filled', 'DisplayName', 'plan');
+            sp.HandleVisibility = 'off';
+            
+            ss = scatter(safe_x, safe_y, 15, 'red', 'filled', 'DisplayName', 'plan');
+            ss.HandleVisibility = 'off';
+            
+            for i=1:length(blended_plan{1})
+                [val_color, ~] = custom_colormap(alphas(i), 0, 1);
+                sb = scatter(blended_plan{1}(i), blended_plan{2}(i), 15, val_color, 'filled', 'DisplayName', 'plan');
+                sb.HandleVisibility = 'off';
+            end
         end 
         
         function plot_planners(obj)

@@ -360,6 +360,8 @@ classdef SplinePlanner < handle
                                                         traj_xs, traj_ys, ...
                                                         safe_xs, safe_ys, ...
                                                         brs_planner)
+            figure(8)
+            clf(8)
             obj.start = start;
             obj.replan_scores = zeros(5, 0);
             
@@ -400,7 +402,12 @@ classdef SplinePlanner < handle
                     spline_vec = [spline_xs', spline_ys', spline_ths'];
                     
                     % Get a vector of the safety values at each planned state
-                    alphas_along_spline = brs_planner.get_value(spline_vec);
+                    raw_alphas_along_spline = brs_planner.get_value(spline_vec);
+                    % Normalize alpha values.
+                    [min_val, max_val] = brs_planner.get_min_and_max_vals();
+                    
+                    alphas_along_spline = min(max(raw_alphas_along_spline, 0), 1);
+                    %alphas_along_spline = (raw_alphas_along_spline - min_val) ./ (max_val - min_val);
                     
                     % Compute weighted plan-relevant part of objective: 
                     %   alpha(x_t) * || x_t - x^plan_t || for all times
@@ -422,6 +429,13 @@ classdef SplinePlanner < handle
                         opt_reward = reward;
                         opt_spline = curr_spline;    
                         opt_alphas = alphas_along_spline;
+                        
+                        % Plots the intermeddiate optimal plans for
+                        % debugging!
+                        obj.plot_plans_and_alphas(traj_xs, traj_ys, ...
+                                        safe_xs, safe_ys, ...
+                                        curr_spline, ...
+                                        alphas_along_spline)
                     end
                 else 
                     replan_score = [candidate_goal(1); candidate_goal(2); -5; -5; -5];
@@ -489,6 +503,41 @@ classdef SplinePlanner < handle
             end 
         end
         
+        %% This function plots the original planned trajectory (in black)
+        % the safety trajectory (in red) and the blended trajectory where
+        % the alpha \in [0,1] and each blended waypoint is colored
+        % proportional to its alpha blending value. 
+        function plot_plans_and_alphas(obj, traj_xs, traj_ys, ...
+                                        safe_xs, safe_ys, ...
+                                        curr_spline, ...
+                                        alphas_along_spline)
+            % Assumes alphas are normalized to [0,1] to 
+            % color code the planned trajectory based on alphas!
+            min_alpha = 0; %min(alphas_along_spline);
+            max_alpha = 1; %max(alphas_along_spline);
+            
+            figure(8);
+            hold on;
+            % Plot the background obstacles.
+            contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.sd_obs, [0 0.05]);
+            sp = scatter(traj_xs, traj_ys, 15, 'black', 'filled', 'DisplayName', 'plan');
+            sp.HandleVisibility = 'off';
+            ss = scatter(safe_xs, safe_ys, 15, [168/255., 8/255., 0], 'filled', 'DisplayName', 'plan');
+            ss.HandleVisibility = 'off';
+            for i=1:length(curr_spline{1})
+                curr_alpha = alphas_along_spline(i);
+                [val_color, ~] = custom_colormap(curr_alpha, min_alpha, max_alpha);
+                sb = scatter(curr_spline{1}(i), curr_spline{2}(i), ...
+                            15, val_color, ...
+                            'filled', 'DisplayName', 'plan');
+                sb.HandleVisibility = 'off';
+            end
+            [~, cmap] = custom_colormap(curr_alpha, min_alpha, max_alpha);
+            colormap(cmap);
+            h = colorbar;
+            caxis([min_alpha, max_alpha]);
+            ylabel(h, 'alpha (low: more safe, high: more plan)');
+        end
                 
         %% Plot all spline replan scores
         function plot_replan_scores(obj, savefig_path)

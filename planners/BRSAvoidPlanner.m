@@ -59,6 +59,12 @@ classdef BRSAvoidPlanner < handle
         function [value] = get_value(obj, x)
             value = eval_u(obj.grid, obj.valueFun, x);
         end
+        
+        % Gets the min and max values in the value function
+        function [min_val, max_val] = get_min_and_max_vals(obj)
+            min_val = min(obj.valueFun, [], 'all');
+            max_val = max(obj.valueFun, [], 'all');
+        end
     end
 end
 
