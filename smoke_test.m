@@ -2,7 +2,8 @@ function smoke_test()
     close all;
     params = default_hyperparams();
     % ============ Blend Scheme ============== %
-    %params.blend_scheme = 'time_varying_value_blend_safety_control_traj'; 
+    %params.blend_scheme = 'time_vary_alpha_open_loop_safety_control'; 
+    %params.blend_scheme = 'time_vary_alpha_closed_loop_safety_control'; 
     %params.blend_scheme = 'safety_value'; 
     %params.blend_scheme = 'safety_control'; 
     %params.blend_scheme = 'sample_safety_value'; 

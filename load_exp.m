@@ -51,7 +51,8 @@ function [exp] = load_exp(params)
     % fmm map, negative inside obstacle, positive inside free space
     exp.obs_map = signed_obs_map;
     exp.masked_obs_map = masked_obs_map;
-    
+    exp.obstacle = repmat(exp.obs_map, 1, 1, exp.grid_3d.N(3));
+
     %% Navigation Task
     exp.start = params.start;
     exp.goal = params.goal;
@@ -86,7 +87,6 @@ function [exp] = load_exp(params)
     reachAvoidSchemeData.dMode = 'max';
     long_tau = 0:0.5:30;
     exp.reachAvoidSchemeData = reachAvoidSchemeData;
-    exp.obstacle = repmat(exp.obs_map, 1, 1, exp.grid_3d.N(3));
     exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, long_tau); 
 
     %% Avoid BRS
@@ -101,7 +101,7 @@ function [exp] = load_exp(params)
     avoidBrsSchemeData.uMode = 'max';
     avoidBrsSchemeData.dMode = 'min';
     exp.avoidBrsSchemeData = avoidBrsSchemeData; 
-    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, long_tau); 
+    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, long_tau, exp.dt); 
          
     %% Spline Planner
     xstart = exp.start(1:3);
