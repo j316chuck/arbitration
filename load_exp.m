@@ -122,7 +122,7 @@ function [exp] = load_exp(params)
     exp.spline_planner.set_sd_obs(exp.masked_obs_map, params.spline_obs_weight); 
     
     %% Blending Scheme
-    exp.blending.blend_scheme = params.blending_scheme;
+    exp.blending.blend_scheme = params.blend_scheme;
     exp.blending.control_scheme = params.control_scheme; 
     exp.blending.replan_dt = params.replan_dt; 
     exp.blending.zero_level_set = params.zero_level_set;
@@ -130,7 +130,7 @@ function [exp] = load_exp(params)
     exp.blending.alpha = params.alpha;
     exp.blending.temperature = params.temperature;
     exp.blending.num_alpha_samples = params.num_alpha_samples;
-    exp.blending.replan_max_num_candidates = params.replan_max_num_candidates;
+    exp.blending.replan_spline_max_num_candidates = params.replan_spline_max_num_candidates;
     exp.blending.blend_function_name = params.blend_function_name;
     exp.blending.blend_function = params.blend_function;
     exp.blending.use_safe_orig_traj = params.use_safe_orig_traj; 

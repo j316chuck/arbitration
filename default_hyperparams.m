@@ -1,4 +1,5 @@
 function [params] = default_hyperparams()
+    %% Set hyperparameters
     % env
     params.map_basename = 'bookstore';
     repo = what('arbitration');
@@ -20,32 +21,46 @@ function [params] = default_hyperparams()
     params.num_waypts = 50;
     params.horizon = 5;
     % blending params
-    params.blending_scheme = 'time_varying_value_blend_safety_control_traj'; %'mean_value_blend_safety_control_traj'; %'replan_waypoint'; %'probabilistic_blend_safety_control_traj'; %'switch'; 
+    params.blend_scheme = 'time_varying_value_blend_safety_control_traj'; 
     params.control_scheme = 'switch'; 
     params.replan_dt = 1.5;
     params.zero_level_set = 0.1;
     params.replan_level_set = 0.3; 
-    params.replan_max_num_candidates = 10; 
+    params.replan_spline_max_num_candidates = 10; 
     params.alpha = 0.25;
     params.temperature = 0.2;
-    params.blend_function_name = 'reg_sig'; %'sub'
+    params.blend_function_name = 'reg_sig'; %'sub' %'identity'
     params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
     params.num_alpha_samples = 10; 
-    params.use_safe_orig_traj = true; 
+    params.spline_obs_weight = 1;  
     %params.blend_function = @(v) max(min(1, 1-(v/params.temperature)), 0);
-    params.spline_obs_weight = 1; 
-    params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight); %option 2 alpha
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight); %option 1 alpha
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_spline_obs_weight_%f", params.replan_dt, params.zero_level_set, params.spline_obs_weight); %option 0 switch 
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight); %option 1 alpha
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_use_safe_%d_level_set_%.2f_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples, params.use_safe_orig_traj, params.zero_level_set, params.spline_obs_weight); %option 1.5 probabilistic alpha
-    %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_level_set_%.3f_replan_level_set_%f_spline_obs_weight_%f_max_num_candidates_%f", params.replan_dt, params.zero_level_set, params.replan_level_set, params.spline_obs_weight, params.replan_max_num_candidates);  %replan waypoint option 4
-
-
-    % file path params
+    
+    %% Get hyperparam string
+    if strcmp(params.blend_scheme, 'no_replan')
+        params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight);
+    elseif strcmp(params.blend_scheme, 'safety_value') 
+        params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight); 
+    elseif strcmp(params.blend_scheme, 'safety_control')
+        params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight);
+    elseif strcmp(params.blend_scheme, 'sample_safety_value')
+        params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f_spline_obs_weight_%f", params.replan_dt, params.alpha, params.spline_obs_weight);
+    elseif strcmp(params.blend_scheme, 'sample_safety_control')
+        params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_spline_obs_weight_%f", params.replan_dt, params.num_alpha_samples , arams.spline_obs_weight);
+    elseif strcmp(params.blend_scheme, 'time_vary_alpha_closed_loop_safety_control')
+        params.hyperparam_str = sprintf("replan_dt_%.3f_spline_obs_weight_%f", params.replan_dt, params.spline_obs_weight);
+    elseif strcmp(params.blend_scheme, 'replan_waypoint')
+        params.hyperparam_str = sprintf("replan_dt_%.3f_replan_level_set_%f_spline_obs_weight_%f_spline_max_num_spline_candidates_%f", ...
+        params.replan_dt, params.replan_level_set, params.spline_obs_weight, params.replan_spline_max_num_candidates); 
+    else 
+        warning("blending scheme not supported"); 
+        return 
+    end 
+    
+    %% Get file path params
     params.clear_dir = false; 
-    params.run_planner = false; 
+    params.run_planner = true; 
     params.run_brs = false;
-    params.save_plot = true; 
-    params.plot_level = 2; %every iter, every replan, at the end, not at all
+    params.save_plot = true;
+    % level 1: every timestamp, level 2: every mpc, level 3: at the end
+    params.plot_level = 2;
 end 
