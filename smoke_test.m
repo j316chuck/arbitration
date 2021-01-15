@@ -7,6 +7,7 @@ function smoke_test()
                         'sample_safety_value', ...
                         'sample_safety_control', ...
                         'replan_waypoint', ....
+                        'replan_safe_traj', ...
                         'none'};    
                     
     % ============ Control  Scheme ============== %
@@ -29,15 +30,16 @@ function smoke_test()
     }; 
 
     % ============ Run smoke test ============== %
+    exp_names = {}; 
     failed_cases = {}; 
-    pb.exp_name = ''; 
+    results = []; 
+    elapsed_time = []; 
+    exp_name = ''; 
+    termination_state = -1; 
     for i = 1:5
         for k = 1:length(all_control_schemes)
-            for j = 3:length(all_blend_schemes)
-                % Uncomment to run on one single control and blend scheme
-                %if j ~= 2 || k ~= 3
-                %    continue; 
-                %end 
+            for j = 1:length(all_blend_schemes)
+                tic; 
                 try 
                     params = default_hyperparams(); 
                     params.start = starts{i};
@@ -49,11 +51,21 @@ function smoke_test()
                     exp = load_exp(params); 
                     pb = Planner(exp);
                     pb.blend_plans(); 
+                    exp_name = pb.exp_name; 
+                    termination_state = pb.termination_state; 
                 catch
+                    exp_name = pb.exp_name; 
+                    termination_state = 3; 
                     failed_cases{end+1} = pb.exp_name; 
                 end
+                exp_names{end+1} = exp_name; 
+                if isempty(termination_state)
+                    termination_state = 3; 
+                end
+                results(end+1) = termination_state;
+                elapsed_time(end+1) = toc; 
+                save('smoke_test.mat', 'exp_names', 'results', 'elapsed_time', 'failed_cases'); 
             end 
         end 
     end 
-    save('failed_states.mat'); 
 end
