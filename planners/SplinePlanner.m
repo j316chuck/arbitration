@@ -195,11 +195,11 @@ classdef SplinePlanner < handle
         end
         
         %% Replans a path that uses only safe trajectories
-        function opt_spline = replan_safe_traj_only(obj, start, brs_planner, zero_level_set, mpc_horizon)
+        function opt_spline = replan_only_safe_traj(obj, start, brs_planner, zero_level_set, mpc_horizon)
             obj.start = start;
             obj.replan_scores = zeros(5, 0);
             
-            opt_reward = 100000000000000.0;
+            opt_cost = 100000000000000.0;
             opt_spline = {};
             curr_spline = {};
             
@@ -234,13 +234,16 @@ classdef SplinePlanner < handle
                 
                 % If current spline is dyamically feasible, safe, and low
                 % cost, then we replace with the optimal trajectory
-                if feasible_horizon <= obj.horizon && reward < opt_reward
+                goal_cost = obj.eval_goal_cost(curr_spline);
+                obs_cost = obj.eval_obstacle_cost(curr_spline); 
+                spline_cost = obs_cost + goal_cost;
+                if feasible_horizon <= obj.horizon && spline_cost < opt_cost 
                     spline_vec = [curr_spline{1}; curr_spline{2}; curr_spline{3}];
-                    spline_vec = spline_vec(1:mpc_horizon, :);
+                    spline_vec = spline_vec(:, 1:mpc_horizon);
                     alphas = brs_planner.get_value(spline_vec);
-                    is_safe = ~(any(alphas) < zero_level_set); 
+                    is_safe = ~(any(alphas < zero_level_set)); 
                     if is_safe
-                        opt_reward = reward;
+                        opt_cost = spline_cost;
                         opt_spline = curr_spline;                        
                     end
                 end   

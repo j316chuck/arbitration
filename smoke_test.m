@@ -9,6 +9,7 @@ function smoke_test()
     %params.blend_scheme = 'sample_safety_control'; 
     %params.blend_scheme = 'replan_waypoint'; 
     params.blend_scheme = 'none';
+    %params.blend_scheme = 'replan_safe_traj';
     
     % ============ Control  Scheme ============== %
     params.control_scheme = 'follow'; 
