@@ -126,7 +126,6 @@ function [exp] = load_exp(params)
     exp.blending.replan_spline_max_num_candidates = params.replan_spline_max_num_candidates;
     exp.blending.blend_function_name = params.blend_function_name;
     exp.blending.blend_function = params.blend_function;
-    exp.blending.use_safe_orig_traj = params.use_safe_orig_traj; 
     
     %% Experiment Params
     exp.hyperparam_str = params.hyperparam_str;

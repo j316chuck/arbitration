@@ -138,6 +138,118 @@ classdef SplinePlanner < handle
             end
         end 
         
+                %% Plans a path from start to goal.
+        function opt_spline = plan(obj, start)
+            obj.start = start;            
+            opt_cost = 100000000000000.0;
+            opt_spline = {};
+            curr_spline = {};
+            N = length(obj.disc_3d);
+            obj.all_costs = zeros(N, 5);
+            for ti=1:N
+                candidate_goal = obj.disc_3d(ti, :);
+                
+                % ignore candidate goals inside obstacles.
+                if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
+                    continue;
+                end
+                
+                % orientation should match with goal final vel ~= 0.
+                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
+                
+                % Compute spline from start to candidate (x,y) goal.
+                curr_spline = ...
+                    spline(start, candidate_goal, obj.horizon, obj.num_waypts);
+                
+                % Sanity check (and correct) all points on spline to be within env bounds.
+                curr_spline = obj.sanity_check_spline(curr_spline);
+                
+                % Compute the dynamically feasible horizon for the current plan.
+                feasible_horizon = ...
+                    obj.compute_dyn_feasible_horizon(curr_spline, ...
+                    obj.max_linear_vel, ...
+                    obj.max_angular_vel, ...
+                    obj.horizon);
+               
+                % If current spline is dyamically feasible, check if it is low cost.
+                if (feasible_horizon <= obj.horizon)
+                    goal_cost = obj.eval_goal_cost(curr_spline);
+                    obs_cost = obj.eval_obstacle_cost(curr_spline); 
+                    total_cost = obs_cost + goal_cost;
+                    if (total_cost < opt_cost)
+                        opt_cost = total_cost;
+                        opt_spline = curr_spline;
+                    end
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), goal_cost, obs_cost, total_cost];
+                else
+                    BIG_COST = 1000; % hyperparams to make contour plots look pretty
+                    SMALL_COST = 200; % hyperparams to make contour plots look pretty
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), SMALL_COST, BIG_COST, BIG_COST]; 
+                end
+            end
+            if isempty(opt_spline)
+                warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
+            else
+                obj.opt_spline = opt_spline;
+            end 
+        end
+        
+        %% Replans a path that uses only safe trajectories
+        function opt_spline = replan_safe_traj_only(obj, start, brs_planner, zero_level_set, mpc_horizon)
+            obj.start = start;
+            obj.replan_scores = zeros(5, 0);
+            
+            opt_reward = 100000000000000.0;
+            opt_spline = {};
+            curr_spline = {};
+            
+            % DEBUGGING
+            %figure
+            all_rewards = [];
+            plt_handles = {};
+            
+            for ti=1:length(obj.disc_3d) 
+                candidate_goal = obj.disc_3d(ti, :);
+                
+                % ignore candidate goals inside obstacles.
+                if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
+                    continue;
+                end
+                
+                % orientation should match with goal final vel ~= 0.
+                candidate_goal = [candidate_goal,  0.01]; %[candidate_goal, 0.01];
+                
+                % Compute spline from start to candidate (x,y) goal.
+                curr_spline = ...
+                    spline(start, candidate_goal, obj.horizon, obj.num_waypts);
+                
+                % Sanity check (and correct) all points on spline to be within env bounds.
+                curr_spline = obj.sanity_check_spline(curr_spline);
+                % Compute the dynamically feasible horizon for the current plan.
+                feasible_horizon = ...
+                    obj.compute_dyn_feasible_horizon(curr_spline, ...
+                    obj.max_linear_vel, ...
+                    obj.max_angular_vel, ...
+                    obj.horizon);
+                
+                % If current spline is dyamically feasible, safe, and low
+                % cost, then we replace with the optimal trajectory
+                if feasible_horizon <= obj.horizon && reward < opt_reward
+                    spline_vec = [curr_spline{1}; curr_spline{2}; curr_spline{3}];
+                    spline_vec = spline_vec(1:mpc_horizon, :);
+                    alphas = brs_planner.get_value(spline_vec);
+                    is_safe = ~(any(alphas) < zero_level_set); 
+                    if is_safe
+                        opt_reward = reward;
+                        opt_spline = curr_spline;                        
+                    end
+                end   
+            end
+            if isempty(opt_spline)
+                warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
+            end
+        end 
+        
         %% Replans a path that minimizes distance between the original trajectory and the safety trajectory
         function opt_spline = replan_with_safety_controls(obj, start, traj_xs, traj_ys, safe_xs, safe_ys, alpha)
             obj.start = start;
@@ -445,62 +557,6 @@ classdef SplinePlanner < handle
             if isempty(opt_spline)
                 warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
             end
-        end
-        
-        %% Plans a path from start to goal.
-        function opt_spline = plan(obj, start)
-            obj.start = start;            
-            opt_cost = 100000000000000.0;
-            opt_spline = {};
-            curr_spline = {};
-            N = length(obj.disc_3d);
-            obj.all_costs = zeros(N, 5);
-            for ti=1:N
-                candidate_goal = obj.disc_3d(ti, :);
-                
-                % ignore candidate goals inside obstacles.
-                if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
-                    continue;
-                end
-                
-                % orientation should match with goal final vel ~= 0.
-                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
-                
-                % Compute spline from start to candidate (x,y) goal.
-                curr_spline = ...
-                    spline(start, candidate_goal, obj.horizon, obj.num_waypts);
-                
-                % Sanity check (and correct) all points on spline to be within env bounds.
-                curr_spline = obj.sanity_check_spline(curr_spline);
-                
-                % Compute the dynamically feasible horizon for the current plan.
-                feasible_horizon = ...
-                    obj.compute_dyn_feasible_horizon(curr_spline, ...
-                    obj.max_linear_vel, ...
-                    obj.max_angular_vel, ...
-                    obj.horizon);
-               
-                % If current spline is dyamically feasible, check if it is low cost.
-                if (feasible_horizon <= obj.horizon)
-                    goal_cost = obj.eval_goal_cost(curr_spline);
-                    obs_cost = obj.eval_obstacle_cost(curr_spline); 
-                    total_cost = obs_cost + goal_cost;
-                    if (total_cost < opt_cost)
-                        opt_cost = total_cost;
-                        opt_spline = curr_spline;
-                    end
-                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), goal_cost, obs_cost, total_cost];
-                else
-                    BIG_COST = 1000; % hyperparams to make contour plots look pretty
-                    SMALL_COST = 200; % hyperparams to make contour plots look pretty
-                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), SMALL_COST, BIG_COST, BIG_COST]; 
-                end
-            end
-            if isempty(opt_spline)
-                warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
-            else
-                obj.opt_spline = opt_spline;
-            end 
         end
         
         %% This function plots the original planned trajectory (in black)
