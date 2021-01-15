@@ -32,8 +32,8 @@ function smoke_test()
     failed_cases = {}; 
     pb.exp_name = ''; 
     for i = 1:5
-        for j = 1:length(all_blend_schemes)
-            for k = 1:length(all_control_schemes)
+        for k = 1:length(all_control_schemes)
+            for j = 3:length(all_blend_schemes)
                 % Uncomment to run on one single control and blend scheme
                 %if j ~= 2 || k ~= 3
                 %    continue; 
@@ -44,7 +44,8 @@ function smoke_test()
                     params.goal = goals{i};
                     params.blend_scheme = all_blend_schemes{j}; 
                     params.control_scheme = all_control_schemes{k}; 
-                    params.run_planner = true; % save state, only have to run once
+                    params.hyperparam_str = get_hyperparam_string(params); 
+                    params.run_planner = false; % save state, only have to run once
                     exp = load_exp(params); 
                     pb = Planner(exp);
                     pb.blend_plans(); 
