@@ -51,13 +51,6 @@ function [exp] = load_exp(params)
     % fmm map, negative inside obstacle, positive inside free space
     exp.obs_map = signed_obs_map;
     exp.masked_obs_map = masked_obs_map;
-    % debug obstacle map
-    figure(10);
-    hold on;
-    contour(exp.grid_2d.xs{1}, exp.grid_2d.xs{2}, exp.occ_map, [0.5, 0.5]); 
-    contour(exp.grid_2d.xs{1}, exp.grid_2d.xs{2}, exp.binary_occ_map); 
-    contourf(exp.grid_2d.xs{1}, exp.grid_2d.xs{2}, exp.masked_obs_map, [0.1 0.1]);
-    colorbar; 
     
     %% Navigation Task
     exp.start = params.start;

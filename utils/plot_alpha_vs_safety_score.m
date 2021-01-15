@@ -10,12 +10,13 @@ function test_safety_blend()
         all_exp_metrics{i} = zeros(0, 7); 
         all_exp_names{i} = {}; 
     end  
-    path = './old_outputs/option_1_5_prob_control';
+    path = '../old_outputs/option_1_5_prob_control';
     dirs = dir(fullfile(path));
     N = length(dirs);
     orig_traj_avg_safety_score = [];
     safety_traj_avg_safety_score = [];
     mpc_alphas = [];
+    difference_safety = []; 
     for eti = 1:Nt % experiment_type_index
         exp_type = exp_types{eti};
         for j = 1:N
@@ -47,17 +48,30 @@ function test_safety_blend()
                         end 
                         mean_ss = safety_score / (et - st + 1); 
                         safety_traj_avg_safety_score(end+1) = mean_ss; 
-                        mpc_alphas(end+1) = max(obj.blend_traj(6, it), 0);   
+                        mpc_alphas(end+1) = max(obj.blend_traj(6, it), 0);
+                        difference_safety(end+1) = safety_traj_avg_safety_score(end) - orig_traj_avg_safety_score(end); 
                     end 
                 else 
                     metrics(end+1, :) = -ones(7, 1)' * 1; 
                     fprintf("Failed exp: %s\n", exp_name); 
                 end 
-                scatter(orig_traj_avg_safety_score, mpc_alphas, 'rx', 20);
-                scatter(safety_traj_avg_safety_score, mpc_alphas, 'bo', 20);
-
+                figure(1);
+                clf;
+                hold on;
+                xlabel("safety score");
+                ylabel("alpha");
+                title("Alpha vs Safety Score");
+                scatter(difference_safety, mpc_alphas, 30, 'gx', 'DisplayName', 'difference'); 
+                scatter(orig_traj_avg_safety_score, mpc_alphas, 30, 'rx', 'DisplayName', 'orig_traj');
+                scatter(safety_traj_avg_safety_score, mpc_alphas, 30, 'bo', 'DisplayName', 'safety_traj');
+                legend('Interpreter', 'None');
                 all_exp_metrics{eti} = metrics;
             end 
         end
     end
+    
+    X = difference_safety;
+    y = mpc_alphas;
+    b = glmfit(X, y, 'binomial','link','logit'); 
+    fprintf("%f", b); 
 end 
