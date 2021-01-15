@@ -246,7 +246,8 @@ classdef Planner < handle
                                                         plan{2}, ...
                                                         next_safety_traj(1, :), ...
                                                         next_safety_traj(2, :), ...
-                                                        new_plan, new_alphas);
+                                                        new_plan, new_alphas, ...
+                                                        (obj.cur_timestamp-1)*obj.dt);
                           % ========== DEBUGGING! =========== %   
                                                     
                           next_blend_traj = [new_plan{1}; new_plan{2}; ...
@@ -709,17 +710,19 @@ classdef Planner < handle
             scatter(v2(1), v2(2), 30, 'bo');
         end 
         
-        function plot_value_blended_traj(obj, plan_x, plan_y, safe_x, safe_y, blended_plan, alphas)
+        function plot_value_blended_traj(obj, plan_x, plan_y, safe_x, safe_y, blended_plan, alphas, sim_tstep)
             figure(7);
+            clf(7);
             hold on;
             
+            title(strcat('Simulation at real-time: ', num2str(sim_tstep), ' s'));
             % Plot the background obstacles.
             contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0]);
             
-            sp = scatter(plan_x, plan_y, 15, 'blue', 'filled', 'DisplayName', 'plan');
+            sp = scatter(plan_x, plan_y, 15, 'black', 'markerfacecolor', [0.4,0.4,0.4], 'DisplayName', 'plan');
             sp.HandleVisibility = 'off';
             
-            ss = scatter(safe_x, safe_y, 15, 'red', 'filled', 'DisplayName', 'plan');
+            ss = scatter(safe_x, safe_y, 15, [168/255., 8/255., 0], 'markerfacecolor', [255/255., 176/255., 176/255.], 'DisplayName', 'plan');
             ss.HandleVisibility = 'off';
             
             for i=1:length(blended_plan{1})
@@ -727,6 +730,14 @@ classdef Planner < handle
                 sb = scatter(blended_plan{1}(i), blended_plan{2}(i), 15, val_color, 'filled', 'DisplayName', 'plan');
                 sb.HandleVisibility = 'off';
             end
+            % set colorbar.
+            [~, cmap] = custom_colormap(0.1, 0, 1);
+            colormap(cmap)
+            h = colorbar;
+            caxis([0,1]);
+            ylabel(h, 'alpha (low: more safe, high: more plan)');
+            % plot the goal.
+            scatter(obj.goal(1), obj.goal(2), 100, 'k', 'x', 'DisplayName', 'goal'); 
         end 
         
         function plot_planners(obj)
