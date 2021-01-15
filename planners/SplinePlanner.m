@@ -518,11 +518,7 @@ classdef SplinePlanner < handle
                     
                     % Get a vector of the safety values at each planned state
                     raw_alphas_along_spline = brs_planner.get_value(spline_vec);
-                    % Normalize alpha values.
-                    [min_val, max_val] = brs_planner.get_min_and_max_vals();
-                    
                     alphas_along_spline = min(max(raw_alphas_along_spline, 0), 1);
-                    %alphas_along_spline = (raw_alphas_along_spline - min_val) ./ (max_val - min_val);
                     
                     % Compute weighted plan-relevant part of objective: 
                     %   alpha(x_t) * || x_t - x^plan_t || for all times
@@ -570,7 +566,7 @@ classdef SplinePlanner < handle
         %   
         %   where the running cost function is:
         %       cost(., ., .) = alpha(x_t)*||x_t - x^plan_t|| + 
-        %                             (1-alpha(x_t)) * || x_t - f(x_{t-1}, u_{t-1})||
+        %                             (1-alpha(x_t)) * ||x_t - f(x_{t-1}, u_{safe})||
         % 
         %   and the blending is via the value function:
         %       alpha(x_t) = V^safe(x_t)
@@ -578,7 +574,6 @@ classdef SplinePlanner < handle
         %  
         function [opt_spline, opt_alphas] = closed_loop_replan_with_value_blending(obj, start, ...
                                                         traj_xs, traj_ys, ...
-                                                        safe_xs, safe_ys, ...
                                                         brs_planner)
             figure(8)
             clf(8)
@@ -622,40 +617,43 @@ classdef SplinePlanner < handle
                     spline_vec = [spline_xs', spline_ys', spline_ths'];
                     
                     % Get a vector of the safety values at each planned state
-                    raw_alphas_along_spline = brs_planner.get_value(spline_vec);
-                    % Normalize alpha values.
-                    [min_val, max_val] = brs_planner.get_min_and_max_vals();
-                    
+                    raw_alphas_along_spline = brs_planner.get_value(spline_vec);                    
                     alphas_along_spline = min(max(raw_alphas_along_spline, 0), 1);
-                    %alphas_along_spline = (raw_alphas_along_spline - min_val) ./ (max_val - min_val);
-                    
+
                     % Compute weighted plan-relevant part of objective: 
                     %   alpha(x_t) * || x_t - x^plan_t || for all times
                     replan_dist = alphas_along_spline .* obj.l2_dist(spline_xs(:), traj_xs(:), spline_ys(:), traj_ys(:));
                     replan_cost = sum(replan_dist);
                     
                     % Compute weighted safety-relevant part of objective: 
-                    %   (1 - alpha(x_t)) * || x_t - x^safe_t|| for all times
-                    safety_dist = (1 - alphas_along_spline) .* obj.l2_dist(spline_xs(:), safe_xs(:), spline_ys(:), safe_ys(:));
+                    %   (1 - alpha(x_t)) * || x_t - f(x_{t-1}, u_{safe}) || for all times
+                    Ns = length(alphas_along_spline) - 1; 
+                    safe_states = zeros(3, Ns);  
+                    for i = 1:Ns
+                       state = [spline_xs(i), spline_ys(i), spline_ths(i)]; 
+                       safe_state = brs_planner.use_avoid_control(state); 
+                       safe_states(:, i) =  safe_state; 
+                    end 
+                    safe_xs = safe_states(1, :); 
+                    safe_ys = safe_states(2, :); 
+                    spline_xs = spline_xs(2:end); 
+                    spline_ys = spline_ys(2:end); 
+                    safety_dist = (1 - alphas_along_spline(2:end)) .* obj.l2_dist(spline_xs(:), safe_xs(:), spline_ys(:), safe_ys(:));
                     safety_cost = sum(safety_dist);
-                    
                     % Compute the total objective summed over time.
                     reward = replan_cost + safety_cost;
-                    
+    
                     replan_score = [candidate_goal(1); candidate_goal(2); safety_cost; replan_cost; reward];
                     obj.replan_scores = [obj.replan_scores, replan_score];
-                    
                     if (reward < opt_reward)
                         opt_reward = reward;
                         opt_spline = curr_spline;    
                         opt_alphas = alphas_along_spline;
-                        
+                        fprintf("Total cost %f Safety cost: %f replan cost: %f\n", reward, safety_cost, replan_cost); 
                         % Plots the intermeddiate optimal plans for
                         % debugging!
-                        obj.plot_plans_and_alphas(traj_xs, traj_ys, ...
-                                        safe_xs, safe_ys, ...
-                                        curr_spline, ...
-                                        alphas_along_spline)
+                        %obj.plot_plans_and_alphas(traj_xs, traj_ys, ...
+                        %safe_xs, safe_ys, curr_spline, alphas_along_spline);
                     end
                 else 
                     replan_score = [candidate_goal(1); candidate_goal(2); -5; -5; -5];

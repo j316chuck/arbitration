@@ -25,18 +25,18 @@ function [params] = default_hyperparams()
     params.goal = [4; 3; pi/2; 0.01]; 
     % ============ Blend Scheme ============== %
     %params.blend_scheme = 'time_vary_alpha_open_loop_safety_control'; 
-    %params.blend_scheme = 'time_vary_alpha_closed_loop_safety_control'; 
+    params.blend_scheme = 'time_vary_alpha_closed_loop_safety_control'; 
     %params.blend_scheme = 'safety_value'; 
     %params.blend_scheme = 'safety_control'; 
     %params.blend_scheme = 'sample_safety_value'; 
     %params.blend_scheme = 'sample_safety_control'; 
     %params.blend_scheme = 'replan_waypoint';  
     %params.blend_scheme = 'none';
-    params.blend_scheme = 'replan_safe_traj';
+    %params.blend_scheme = 'replan_safe_traj';
 
     % ============ Control  Scheme ============== %
-    %params.control_scheme = 'follow'; 
-    params.control_scheme = 'switch'; 
+    params.control_scheme = 'follow'; 
+    %params.control_scheme = 'switch'; 
     %params.control_scheme = 'constant'; 
     %params.control_scheme = 'distance';  
     

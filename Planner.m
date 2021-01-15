@@ -231,7 +231,7 @@ classdef Planner < handle
         
         function replan_time_vary_alpha_closed_loop_safety_control(obj, plan, safety_plan)
             [new_plan, new_alphas] = obj.spline_planner.closed_loop_replan_with_value_blending(obj.state, ...
-                plan{1}, plan{2}, safety_plan(1, :), safety_plan(2, :), obj.brs_planner);
+                plan{1}, plan{2}, obj.brs_planner);
             next_plan = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; new_alphas'];  
             % ========== DEBUGGING! =========== %                          
             obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
