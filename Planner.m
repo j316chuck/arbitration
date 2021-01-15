@@ -224,8 +224,8 @@ classdef Planner < handle
                 plan{1}, plan{2}, safety_plan(1, :), safety_plan(2, :), obj.brs_planner);
             next_plan = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; new_alphas'];  
             % ========== DEBUGGING! =========== %                          
-            obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
-                safety_plan(1, :), safety_plan(2, :), new_plan, new_alphas);
+            % obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
+            %    safety_plan(1, :), safety_plan(2, :), new_plan, new_alphas);
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_plan]; 
         end 
         
@@ -234,8 +234,8 @@ classdef Planner < handle
                 plan{1}, plan{2}, obj.brs_planner);
             next_plan = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; new_alphas'];  
             % ========== DEBUGGING! =========== %                          
-            obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
-                safety_plan(1, :), safety_plan(2, :), new_plan, new_alphas);
+            % obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
+            %    safety_plan(1, :), safety_plan(2, :), new_plan, new_alphas);
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_plan]; 
         end 
         
