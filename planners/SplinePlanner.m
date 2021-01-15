@@ -77,6 +77,62 @@ classdef SplinePlanner < handle
             obj.cur_spline_ctrl_idx = 1;
         end 
         
+        %% Plans a path from start to goal.
+        function opt_spline = plan(obj, start)
+            obj.start = start;            
+            opt_cost = 100000000000000.0;
+            opt_spline = {};
+            curr_spline = {};
+            N = length(obj.disc_3d);
+            obj.all_costs = zeros(N, 5);
+            for ti=1:N
+                candidate_goal = obj.disc_3d(ti, :);
+                
+                % ignore candidate goals inside obstacles.
+                if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
+                    continue;
+                end
+                
+                % orientation should match with goal final vel ~= 0.
+                candidate_goal = [candidate_goal, 0.01]; %[candidate_goal, 0.01];
+                
+                % Compute spline from start to candidate (x,y) goal.
+                curr_spline = ...
+                    spline(start, candidate_goal, obj.horizon, obj.num_waypts);
+                
+                % Sanity check (and correct) all points on spline to be within env bounds.
+                curr_spline = obj.sanity_check_spline(curr_spline);
+                
+                % Compute the dynamically feasible horizon for the current plan.
+                feasible_horizon = ...
+                    obj.compute_dyn_feasible_horizon(curr_spline, ...
+                    obj.max_linear_vel, ...
+                    obj.max_angular_vel, ...
+                    obj.horizon);
+               
+                % If current spline is dyamically feasible, check if it is low cost.
+                if (feasible_horizon <= obj.horizon)
+                    goal_cost = obj.eval_goal_cost(curr_spline);
+                    obs_cost = obj.eval_obstacle_cost(curr_spline); 
+                    total_cost = obs_cost + goal_cost;
+                    if (total_cost < opt_cost)
+                        opt_cost = total_cost;
+                        opt_spline = curr_spline;
+                    end
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), goal_cost, obs_cost, total_cost];
+                else
+                    BIG_COST = 1000; % hyperparams to make contour plots look pretty
+                    SMALL_COST = 200; % hyperparams to make contour plots look pretty
+                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), SMALL_COST, BIG_COST, BIG_COST]; 
+                end
+            end
+            if isempty(opt_spline)
+                warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
+            else
+                obj.opt_spline = opt_spline;
+            end 
+        end
+        
         %% Replans a path that uses thresholded safety and distance scores to find a safe trajectory 
         function opt_spline = replan_with_brs_planner(obj, start, traj_xs, traj_ys, brs_planner, alpha)
             obj.start = start;
@@ -132,6 +188,65 @@ classdef SplinePlanner < handle
                     replan_score = [candidate_goal(1); candidate_goal(2); -5; -5; -5];
                     obj.replan_scores = [obj.replan_scores, replan_score];
                 end             
+            end
+            if isempty(opt_spline)
+                warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
+            end
+        end 
+        
+        %% Replans a path that uses only safe trajectories
+        function opt_spline = replan_only_safe_traj(obj, start, brs_planner, zero_level_set, mpc_horizon)
+            obj.start = start;
+            obj.replan_scores = zeros(5, 0);
+            
+            opt_cost = 100000000000000.0;
+            opt_spline = {};
+            curr_spline = {};
+            
+            % DEBUGGING
+            %figure
+            all_rewards = [];
+            plt_handles = {};
+            
+            for ti=1:length(obj.disc_3d) 
+                candidate_goal = obj.disc_3d(ti, :);
+                
+                % ignore candidate goals inside obstacles.
+                if eval_u(obj.grid_2d, obj.sd_obs, candidate_goal(1:2)) < 0
+                    continue;
+                end
+                
+                % orientation should match with goal final vel ~= 0.
+                candidate_goal = [candidate_goal,  0.01]; %[candidate_goal, 0.01];
+                
+                % Compute spline from start to candidate (x,y) goal.
+                curr_spline = ...
+                    spline(start, candidate_goal, obj.horizon, obj.num_waypts);
+                
+                % Sanity check (and correct) all points on spline to be within env bounds.
+                curr_spline = obj.sanity_check_spline(curr_spline);
+                % Compute the dynamically feasible horizon for the current plan.
+                feasible_horizon = ...
+                    obj.compute_dyn_feasible_horizon(curr_spline, ...
+                    obj.max_linear_vel, ...
+                    obj.max_angular_vel, ...
+                    obj.horizon);
+                
+                % If current spline is dyamically feasible, safe, and low
+                % cost, then we replace with the optimal trajectory
+                goal_cost = obj.eval_goal_cost(curr_spline);
+                obs_cost = obj.eval_obstacle_cost(curr_spline); 
+                spline_cost = obs_cost + goal_cost;
+                if feasible_horizon <= obj.horizon && spline_cost < opt_cost 
+                    spline_vec = [curr_spline{1}; curr_spline{2}; curr_spline{3}];
+                    spline_vec = spline_vec(:, 1:mpc_horizon);
+                    alphas = brs_planner.get_value(spline_vec);
+                    is_safe = ~(any(alphas < zero_level_set)); 
+                    if is_safe
+                        opt_cost = spline_cost;
+                        opt_spline = curr_spline;                        
+                    end
+                end   
             end
             if isempty(opt_spline)
                 warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
@@ -356,7 +471,7 @@ classdef SplinePlanner < handle
         %   and the blending is via the value function:
         %       alpha(x_t) = V^safe(x_t)
         %  
-        function [opt_spline, opt_alphas] = replan_with_value_blending(obj, start, ...
+        function [opt_spline, opt_alphas] = open_loop_replan_with_value_blending(obj, start, ...
                                                         traj_xs, traj_ys, ...
                                                         safe_xs, safe_ys, ...
                                                         brs_planner)
@@ -403,11 +518,7 @@ classdef SplinePlanner < handle
                     
                     % Get a vector of the safety values at each planned state
                     raw_alphas_along_spline = brs_planner.get_value(spline_vec);
-                    % Normalize alpha values.
-                    [min_val, max_val] = brs_planner.get_min_and_max_vals();
-                    
                     alphas_along_spline = min(max(raw_alphas_along_spline, 0), 1);
-                    %alphas_along_spline = (raw_alphas_along_spline - min_val) ./ (max_val - min_val);
                     
                     % Compute weighted plan-relevant part of objective: 
                     %   alpha(x_t) * || x_t - x^plan_t || for all times
@@ -432,11 +543,10 @@ classdef SplinePlanner < handle
                         
                         % Plots the intermeddiate optimal plans for
                         % debugging!
-%                         obj.plot_plans_and_alphas(traj_xs, traj_ys, ...
-%                                         safe_xs, safe_ys, ...
-%                                         curr_spline, ...
-%                                         alphas_along_spline);
-%                         bla = 1;
+                        % obj.plot_plans_and_alphas(traj_xs, traj_ys, ...
+                        %                safe_xs, safe_ys, ...
+                        %                curr_spline, ...
+                        %                alphas_along_spline);
                     end
                 else 
                     replan_score = [candidate_goal(1); candidate_goal(2); -5; -5; -5];
@@ -448,15 +558,33 @@ classdef SplinePlanner < handle
             end
         end
         
-        %% Plans a path from start to goal.
-        function opt_spline = plan(obj, start)
-            obj.start = start;            
-            opt_cost = 100000000000000.0;
-            opt_spline = {};
-            curr_spline = {};
-            N = length(obj.disc_3d);
-            obj.all_costs = zeros(N, 5);
-            for ti=1:N
+        %% Replans by choosing alpha proportional to the value at each state
+        %  The distance in the second equation is a closed loop distance
+        %  between the safest action and the current action
+        %   x^* = arg min_x \sum^T_{t=0} cost(x_t, x^plan_t, x^safe_t)
+        %           s.t. x_{t+1} = f(x_t, u_t)   \forall t \in [0,T]
+        %   
+        %   where the running cost function is:
+        %       cost(., ., .) = alpha(x_t)*||x_t - x^plan_t|| + 
+        %                             (1-alpha(x_t)) * ||x_t - f(x_{t-1}, u_{safe})||
+        % 
+        %   and the blending is via the value function:
+        %       alpha(x_t) = V^safe(x_t)
+        %       u_{t} = safety control
+        %  
+        function [opt_spline, opt_alphas] = closed_loop_replan_with_value_blending(obj, start, ...
+                                                        traj_xs, traj_ys, ...
+                                                        brs_planner)
+            figure(8)
+            clf(8)
+            obj.start = start;
+            obj.replan_scores = zeros(5, 0);
+            
+            opt_reward = 100000000000000.0;
+            opt_spline = {}; 
+            opt_alphas = [];
+            
+            for ti=1:length(obj.disc_3d) 
                 candidate_goal = obj.disc_3d(ti, :);
                 
                 % ignore candidate goals inside obstacles.
@@ -480,28 +608,61 @@ classdef SplinePlanner < handle
                     obj.max_linear_vel, ...
                     obj.max_angular_vel, ...
                     obj.horizon);
-               
+                
                 % If current spline is dyamically feasible, check if it is low cost.
                 if (feasible_horizon <= obj.horizon)
-                    goal_cost = obj.eval_goal_cost(curr_spline);
-                    obs_cost = obj.eval_obstacle_cost(curr_spline); 
-                    total_cost = obs_cost + goal_cost;
-                    if (total_cost < opt_cost)
-                        opt_cost = total_cost;
-                        opt_spline = curr_spline;
+                    spline_xs = curr_spline{1}; 
+                    spline_ys = curr_spline{2};
+                    spline_ths = curr_spline{3};
+                    spline_vec = [spline_xs', spline_ys', spline_ths'];
+                    
+                    % Get a vector of the safety values at each planned state
+                    raw_alphas_along_spline = brs_planner.get_value(spline_vec);                    
+                    alphas_along_spline = min(max(raw_alphas_along_spline, 0), 1);
+
+                    % Compute weighted plan-relevant part of objective: 
+                    %   alpha(x_t) * || x_t - x^plan_t || for all times
+                    replan_dist = alphas_along_spline .* obj.l2_dist(spline_xs(:), traj_xs(:), spline_ys(:), traj_ys(:));
+                    replan_cost = sum(replan_dist);
+                    
+                    % Compute weighted safety-relevant part of objective: 
+                    %   (1 - alpha(x_t)) * || x_t - f(x_{t-1}, u_{safe}) || for all times
+                    Ns = length(alphas_along_spline) - 1; 
+                    safe_states = zeros(3, Ns);  
+                    for i = 1:Ns
+                       state = [spline_xs(i), spline_ys(i), spline_ths(i)]; 
+                       safe_state = brs_planner.use_avoid_control(state); 
+                       safe_states(:, i) =  safe_state; 
+                    end 
+                    safe_xs = safe_states(1, :); 
+                    safe_ys = safe_states(2, :); 
+                    spline_xs = spline_xs(2:end); 
+                    spline_ys = spline_ys(2:end); 
+                    safety_dist = (1 - alphas_along_spline(2:end)) .* obj.l2_dist(spline_xs(:), safe_xs(:), spline_ys(:), safe_ys(:));
+                    safety_cost = sum(safety_dist);
+                    % Compute the total objective summed over time.
+                    reward = replan_cost + safety_cost;
+    
+                    replan_score = [candidate_goal(1); candidate_goal(2); safety_cost; replan_cost; reward];
+                    obj.replan_scores = [obj.replan_scores, replan_score];
+                    if (reward < opt_reward)
+                        opt_reward = reward;
+                        opt_spline = curr_spline;    
+                        opt_alphas = alphas_along_spline;
+                        fprintf("Total cost %f Safety cost: %f replan cost: %f\n", reward, safety_cost, replan_cost); 
+                        % Plots the intermeddiate optimal plans for
+                        % debugging!
+                        %obj.plot_plans_and_alphas(traj_xs, traj_ys, ...
+                        %safe_xs, safe_ys, curr_spline, alphas_along_spline);
                     end
-                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), goal_cost, obs_cost, total_cost];
-                else
-                    BIG_COST = 1000; % hyperparams to make contour plots look pretty
-                    SMALL_COST = 200; % hyperparams to make contour plots look pretty
-                    obj.all_costs(ti, :) = [candidate_goal(1), candidate_goal(2), SMALL_COST, BIG_COST, BIG_COST]; 
-                end
+                else 
+                    replan_score = [candidate_goal(1); candidate_goal(2); -5; -5; -5];
+                    obj.replan_scores = [obj.replan_scores, replan_score];
+                end             
             end
             if isempty(opt_spline)
                 warning("Unable to find dynamically feasible and low cost spline plan! Using old spline");
-            else
-                obj.opt_spline = opt_spline;
-            end 
+            end
         end
         
         %% This function plots the original planned trajectory (in black)

@@ -12,12 +12,13 @@ classdef BRSAvoidPlanner < handle
         data_tau
         valueFun
         derivValueFun
+        dt 
         extraArgs
     end
     
     methods
         %% Constructs BRS Avoid Planner.
-        function obj = BRSAvoidPlanner(grid_3d, schemeData, tau)
+        function obj = BRSAvoidPlanner(grid_3d, schemeData, tau, dt)
             if ~isequal(schemeData.uMode, 'max')
                 error("OptCtrl need to maximize distance to obstacle");
             end
@@ -28,6 +29,7 @@ classdef BRSAvoidPlanner < handle
             obj.schemeData = schemeData; 
             obj.dynSys = schemeData.dynSys;
             obj.tau = tau;
+            obj.dt = dt; 
             % Extra Args
             obj.extraArgs.visualize = true;
             obj.extraArgs.plotData.plotDims = [1 1 0];
@@ -58,6 +60,12 @@ classdef BRSAvoidPlanner < handle
         
         function [value] = get_value(obj, x)
             value = eval_u(obj.grid, obj.valueFun, x);
+        end
+        
+        function [state] = use_avoid_control(obj, x)
+            uOpt = obj.get_avoid_u(x); 
+            obj.dynSys.updateState(uOpt, obj.dt, x); 
+            state = obj.dynSys.x; 
         end
         
         % Gets the min and max values in the value function
