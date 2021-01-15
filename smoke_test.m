@@ -1,27 +1,18 @@
 function smoke_test()
-    close all;
-    params = default_hyperparams();
     % ============ Blend Scheme ============== %
-    %params.blend_scheme = 'time_vary_alpha_open_loop_safety_control'; 
-    %params.blend_scheme = 'time_vary_alpha_closed_loop_safety_control'; 
-    %params.blend_scheme = 'safety_value'; 
-    %params.blend_scheme = 'safety_control'; 
-    %params.blend_scheme = 'sample_safety_value'; 
-    %params.blend_scheme = 'sample_safety_control'; 
-    %params.blend_scheme = 'replan_waypoint'; 
-    params.blend_scheme = 'none';
-    %params.blend_scheme = 'replan_safe_traj';
-    
+    all_blend_schemes = {'time_vary_alpha_open_loop_safety_control', ...
+                        'time_vary_alpha_closed_loop_safety_control', ...
+                        'safety_value', ...
+                        'safety_control', ...
+                        'sample_safety_value', ...
+                        'sample_safety_control', ...
+                        'replan_waypoint', ....
+                        'none'};    
+                    
     % ============ Control  Scheme ============== %
-    params.control_scheme = 'follow'; 
-    %params.control_scheme = 'switch'; 
-    %params.control_scheme = 'constant'; 
-    %params.control_scheme = 'distance'; 
-       
-    % ============ More hyperparameters here ============== %
-    
+    all_control_schemes = {'follow', 'switch'};     
   
-    % ============ Smoke Tests ============== %
+    % ============ Smoke Test Cases ============== %
     starts = {
              [-0.375; -1.915; pi; 0.01; 0], ... % open - open
              [-0.375; -1.915; pi; 0.01; 0], ... % open - tight
@@ -36,12 +27,32 @@ function smoke_test()
              [-4.61; -0.76; pi; 0.01; 0], ... % open - obstacle
              [0.395; 2.705; pi/2; 0.01; 0], ... % hard angle
     }; 
+
+    % ============ Run smoke test ============== %
+    failed_cases = {}; 
+    pb.exp_name = ''; 
     for i = 1:5
-        params.start = starts{i};
-        params.goal = goals{i}; 
-        params.run_planner = true; % save state, only have to run once
-        exp = load_exp(params); 
-        pb = Planner(exp);
-        pb.blend_mpc_controls(); 
+        for j = 1:length(all_blend_schemes)
+            for k = 1:length(all_control_schemes)
+                % Uncomment to run on one single control and blend scheme
+                %if j ~= 2 || k ~= 3
+                %    continue; 
+                %end 
+                try 
+                    params = default_hyperparams(); 
+                    params.start = starts{i};
+                    params.goal = goals{i};
+                    params.blend_scheme = all_blend_schemes{j}; 
+                    params.control_scheme = all_control_schemes{k}; 
+                    params.run_planner = true; % save state, only have to run once
+                    exp = load_exp(params); 
+                    pb = Planner(exp);
+                    pb.blend_plans(); 
+                catch
+                    failed_cases{end+1} = pb.exp_name; 
+                end
+            end 
+        end 
     end 
+    save('failed_states.mat'); 
 end
