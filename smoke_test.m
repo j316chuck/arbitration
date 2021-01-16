@@ -1,33 +1,12 @@
 function smoke_test()
     % ============ Blend Scheme ============== %
-    all_blend_schemes = {'time_vary_alpha_open_loop_safety_control', ...
-                        'time_vary_alpha_closed_loop_safety_control', ...
-                        'safety_value', ...
-                        'safety_control', ...
-                        'sample_safety_value', ...
-                        'sample_safety_control', ...
-                        'replan_waypoint', ....
-                        'replan_safe_traj', ...
-                        'none'};    
+    all_blend_schemes = get_all_blend_schemes();    
                     
     % ============ Control  Scheme ============== %
-    all_control_schemes = {'follow', 'switch'};     
+    all_control_schemes = get_all_control_schemes();     
   
     % ============ Smoke Test Cases ============== %
-    starts = {
-             [-0.375; -1.915; pi; 0.01; 0], ... % open - open
-             [-0.375; -1.915; pi; 0.01; 0], ... % open - tight
-             [0.395; 3.86; pi/2; 0.01; 0], ... % tight - tight
-             [-0.375; -1.915; pi; 0.01; 0], ... % open - obstacle
-             [0.395; 3.86; -pi/2; 0.01; 0], ... % tight - tight
-    };     
-    goals = {
-             [0.78; 1.55; pi/2; 0.01; 0], ... % open - open
-             [-0.375; 2.705; pi; 0.01; 0],... % open - tight
-             [0.395; 2.705; pi/2; 0.01; 0], ... % tight - tight
-             [-4.61; -0.76; pi; 0.01; 0], ... % open - obstacle
-             [0.395; 2.705; pi/2; 0.01; 0], ... % hard angle
-    }; 
+    [starts, goals] = get_all_smoke_test_cases(); 
 
     % ============ Run smoke test ============== %
     exp_names = {}; 
