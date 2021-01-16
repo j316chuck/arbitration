@@ -66,6 +66,7 @@ classdef Planner < handle
             obj.safety_traj = [];  % alpha = 0
             obj.blend_traj = []; % alpha = blending_scheme
             obj.switch_traj = []; % alpha = 0 if V(x) < 0 
+            obj.termination_state = -1; 
             
             % Logging information
             repo = what('arbitration');
@@ -480,7 +481,7 @@ classdef Planner < handle
             elseif obj.reached_max_timestamps()
                 obj.termination_state = 2;
             else
-                obj.termination_state = 3;
+                obj.termination_state = -1;
             end 
             save_planner_file = sprintf("%s/final_state.mat", obj.output_folder);
             save(save_planner_file, 'obj');
