@@ -677,8 +677,8 @@ classdef Planner < handle
             end 
         end 
         
-        function plot_spline_replan(obj, verbosity)
-            if obj.plot_level < verbosity 
+        function plot_spline_replan(obj, threshold)
+            if obj.plot_level >= threshold 
                 return 
             end 
             savefigpath = '';
@@ -688,8 +688,8 @@ classdef Planner < handle
             obj.spline_planner.plot_replan_scores(savefigpath);
         end 
         
-        function plot_spline_cost(obj, verbosity)
-            if obj.plot_level < verbosity 
+        function plot_spline_cost(obj, threshold)
+            if obj.plot_level >= threshold 
                 return 
             end 
             savefigpath = '';

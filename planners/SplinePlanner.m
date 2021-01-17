@@ -475,7 +475,6 @@ classdef SplinePlanner < handle
                                                         traj_xs, traj_ys, ...
                                                         safe_xs, safe_ys, ...
                                                         brs_planner)
-            figure(8)
             clf(8)
             obj.start = start;
             obj.replan_scores = zeros(5, 0);
@@ -575,7 +574,6 @@ classdef SplinePlanner < handle
         function [opt_spline, opt_alphas] = closed_loop_replan_with_value_blending(obj, start, ...
                                                         traj_xs, traj_ys, ...
                                                         brs_planner)
-            figure(8)
             clf(8)
             obj.start = start;
             obj.replan_scores = zeros(5, 0);

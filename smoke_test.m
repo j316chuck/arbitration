@@ -27,6 +27,7 @@ function smoke_test()
                     params.run_planner = false; % save state, only have to run once
                     exp = load_exp(params); 
                     pb = Planner(exp);
+                    pb.plot_level = 1;
                     pb.blend_plans(); 
                     exp_name = pb.exp_name; 
                     termination_state = pb.termination_state; 
