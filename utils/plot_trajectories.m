@@ -1,62 +1,72 @@
-%% Change these parameters
-verbose = false;
-repo = what("arbitration"); 
-output_folder = strcat(repo.path, '/outputs'); 
-results_folder = strcat(repo.path, '/outputs/results');
-[starts, goals] = get_all_smoke_test_cases();
-smoke_testcase_index = 1;
-start = starts{smoke_testcase_index};  
-goal = goals{smoke_testcase_index}; 
-control_schemes = {'switch'}; 
-blend_schemes = get_key_blend_schemes(); 
-colors = get_all_blend_scheme_colors(); 
-Nc = length(control_schemes); 
-Nb = length(blend_schemes); 
+function plot_trajectories(index)
+    %% Change these parameters
+    repo = what("arbitration"); 
+    output_folder = strcat(repo.path, '/outputs'); 
+    results_folder = strcat(repo.path, '/outputs/results');
+    [starts, goals] = get_all_smoke_test_cases(); 
+    control_schemes = {'switch'}; 
+    blend_schemes = get_key_blend_schemes(); 
+    colors = get_all_blend_scheme_colors(); 
+    Nc = length(control_schemes); 
+    Nb = length(blend_schemes); 
+    start = starts{index};  
+    goal = goals{index};
 
 
-%% Extract data 
-dirs = dir(fullfile(output_folder));
-st = sprintf("start_[%.2f %.2f %.2f]", start(1), start(2), start(3)); 
-go = sprintf("goal_[%.2f %.2f %.2f]", goal(1), goal(2), goal(3));
-clf
-figure(1); 
-hold on; 
-iteration = 1;
-for j = 1:Nc
-    for k = 1:Nb
-        color = colors(k, :); 
-        cs = control_schemes{j};
-        bs = blend_schemes{k}; 
-        alg_name = sprintf("blend_%s_control_%s", bs, cs); 
-        exp_name = sprintf("%s_%s_%s", st, go, alg_name); 
-        exp_ran = false; 
-        zls_theta = 0; 
-        for it = 1:length(dirs)
-            exp_folder = dirs(it, :); 
-            if ~contains(exp_folder.name, exp_name)
-               continue;
+    %% Extract data 
+    dirs = dir(fullfile(output_folder));
+    st = sprintf("start_[%.2f %.2f %.2f]", start(1), start(2), start(3)); 
+    go = sprintf("goal_[%.2f %.2f %.2f]", goal(1), goal(2), goal(3));
+    plot_name = sprintf("Nav Task %s %s", st, go); 
+    clf
+    figure(1); 
+    hold on; 
+    first_iteration = true;
+    for j = 1:Nc
+        for k = 1:Nb
+            color = colors(k, :); 
+            cs = control_schemes{j};
+            bs = blend_schemes{k}; 
+            alg_name = sprintf("blend_%s_control_%s", bs, cs); 
+            legend_name = sprintf("%s_%s", bs, cs); 
+            exp_name = sprintf("%s_%s_%s", st, go, alg_name); 
+            exp_ran = false; 
+            zls_theta = 0; 
+            for it = 1:length(dirs)
+                exp_folder = dirs(it, :); 
+                if ~contains(exp_folder.name, exp_name)
+                   continue;
+                end 
+                f = fullfile(exp_folder.folder, exp_folder.name, 'final_state.mat');
+                if ~isfile(f)
+                    continue;
+                end 
+                load(f, 'obj');
+                if obj.termination_state == -1
+                    fprintf("Exp %s errored", exp_name); 
+                elseif obj.termination_state == 1
+                    fprintf("Exp %s crashed", exp_name); 
+                elseif obj.termination_state == 2
+                    fprintf("Exp %s tle", exp_name); 
+                end 
+                exp_ran = true; 
+                if first_iteration
+                    first_iteration = false;
+                    plot_env(obj);
+                    plot_zls(obj, zls_theta); 
+                    plot_traj(obj.reach_avoid_planner.opt_traj, 'reach avoid', 'green'); 
+                end 
+                plot_traj(obj.blend_traj, legend_name, color); 
+                set_plot_params(plot_name);
             end 
-            f = fullfile(exp_folder.folder, exp_folder.name, 'final_state.mat');
-            if ~isfile(f)
-                continue;
+            if ~exp_ran
+                fprintf("Missing exp: %s\n", exp_name); 
             end 
-            load(f, 'obj');
-            exp_ran = true; 
-            if iteration == 1
-                plot_env(obj);
-                plot_zls(obj, zls_theta); 
-                plot_traj(obj.reach_avoid_planner.opt_traj, 'reach avoid', 'magenta'); 
-            end 
-            plot_traj(obj.blend_traj, alg_name, color); 
-            set_plot_params(st, go);
-            iteration = iteration + 1; 
-        end 
-        if ~exp_ran
-            fprintf("Missing exp: %s\n", exp_name); 
         end 
     end 
+    figpath = strcat(results_folder, "/", plot_name, ".fig"); 
+    savefig(figpath); 
 end 
-%savefig()
 
 function plot_traj(blend_traj, name, color)
     xs = blend_traj(1, :); 
@@ -72,7 +82,7 @@ function plot_traj(blend_traj, name, color)
     q.AutoScaleFactor = 0.3;
 end 
 
-function set_plot_params(st, go)
+function set_plot_params(name)
     view(0, 90)
     set(gcf, 'color', 'white')
     set(gcf, 'position', [0, 0, 800, 800])
@@ -80,7 +90,6 @@ function set_plot_params(st, go)
     ylabel('y (meters)');
     l = legend('Location', 'NorthWest');
     set(l, 'Interpreter', 'none')
-    name = sprintf("%s %s traj", st, go);
     title(name, 'Interpreter', 'None');
 end 
 

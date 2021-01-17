@@ -2,8 +2,8 @@ function runner()
     %% Set up experiment parameters
     N = 100; 
     no_rerun = true; 
-    run_smoke_test = false; 
-    run_planners = true; 
+    run_smoke_test = true; 
+    run_planners = false; 
     blend_schemes = get_key_blend_schemes();    
     control_schemes = get_all_control_schemes();   
     
