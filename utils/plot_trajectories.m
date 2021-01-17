@@ -11,13 +11,14 @@ function plot_trajectories(index)
     Nb = length(blend_schemes); 
     start = starts{index};  
     goal = goals{index};
+    title_str = "key_blend_switch"; 
 
 
     %% Extract data 
     dirs = dir(fullfile(output_folder));
     st = sprintf("start_[%.2f %.2f %.2f]", start(1), start(2), start(3)); 
     go = sprintf("goal_[%.2f %.2f %.2f]", goal(1), goal(2), goal(3));
-    plot_name = sprintf("s%s %s", st, go); 
+    plot_name = sprintf("%s %s %s", title_str, st, go); 
     clf
     figure(1); 
     hold on; 
@@ -88,7 +89,7 @@ function set_plot_params(name)
     set(gcf, 'position', [0, 0, 800, 800])
     xlabel('x (meters)');
     ylabel('y (meters)');
-    l = legend('Location', 'NorthWest');
+    l = legend('Location', 'SouthWest');
     set(l, 'Interpreter', 'none')
     title(name, 'Interpreter', 'None');
 end 
