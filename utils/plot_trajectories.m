@@ -17,7 +17,7 @@ function plot_trajectories(index)
     dirs = dir(fullfile(output_folder));
     st = sprintf("start_[%.2f %.2f %.2f]", start(1), start(2), start(3)); 
     go = sprintf("goal_[%.2f %.2f %.2f]", goal(1), goal(2), goal(3));
-    plot_name = sprintf("Nav Task %s %s", st, go); 
+    plot_name = sprintf("s%s %s", st, go); 
     clf
     figure(1); 
     hold on; 
