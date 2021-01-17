@@ -9,9 +9,10 @@ function output_analysis()
         mkdir(results_folder); 
     end
     print_smoke_test_results();
-    [metrics, lin_jerk_matrix, ang_jerk_matrix, safety_score_matrix, ...
-    dist_to_opt_traj_matrix, timestamp_matrix, num_safety_control_matrix, ...
-    termination_matrix, exp_name_matrix] = get_metrics(output_folder, verbose);
+     [metrics, lin_jerk_matrix, ang_jerk_matrix, safety_score_matrix, ...
+    dist_to_opt_traj_matrix, timestamp_matrix, ...
+    num_safety_control_matrix, termination_matrix, exp_name_matrix ...
+    crashed_matrix, reached_matrix, tle_matrix, errored_matrix] = get_metrics(output_folder, verbose);
     load(output_path, 'metrics'); 
     print_exp_results(metrics); 
     save(output_path);
@@ -19,15 +20,16 @@ end
 
 function [metrics, lin_jerk_matrix, ang_jerk_matrix, safety_score_matrix, ...
         dist_to_opt_traj_matrix, timestamp_matrix, ...
-        num_safety_control_matrix, termination_matrix, exp_name_matrix] = ... 
+        num_safety_control_matrix, termination_matrix, exp_name_matrix ...
+        crashed_matrix, reached_matrix, tle_matrix, errored_matrix] = ... 
         get_metrics(output_folder, verbose)
-    blend_schemes = get_all_blend_schemes(); 
-    control_schemes = get_all_control_schemes();
     [starts, goals] = get_all_smoke_test_cases();
-    Nb = length(blend_schemes); % blend scheme
-    Nc = length(control_schemes); % control scheme
+    control_schemes = get_all_control_schemes();
+    blend_schemes = get_all_blend_schemes(); 
     Ns = length(starts); % start and goal pairs
-    Nm = 7; % num metrics
+    Nc = length(control_schemes); % control scheme
+    Nb = length(blend_schemes); % blend scheme
+    Nm = 11; % num metrics
     
     % default value -1
     metrics = -ones(Ns, Nc, Nb, Nm); 
@@ -39,6 +41,11 @@ function [metrics, lin_jerk_matrix, ang_jerk_matrix, safety_score_matrix, ...
     num_safety_control_matrix = -ones(Ns, Nc, Nb);
     termination_matrix = -ones(Ns, Nc, Nb);
     exp_name_matrix = cell(Ns, Nc, Nb); 
+    reached_matrix = zeros(Ns, Nc, Nb); 
+    crashed_matrix = zeros(Ns, Nc, Nb); 
+    tle_matrix = zeros(Ns, Nc, Nb); 
+    errored_matrix = zeros(Ns, Nc, Nb); 
+
     dirs = dir(fullfile(output_folder));
     for i = 1:Ns
         for j = 1:Nc
@@ -69,14 +76,22 @@ function [metrics, lin_jerk_matrix, ang_jerk_matrix, safety_score_matrix, ...
                                         obj.scores.avg_dist_to_opt_traj, ...
                                         timestamp, ...
                                         num_safety, ...
-                                        obj.termination_state];
+                                        obj.termination_state, ...
+                                        obj.termination_state == 0, ...
+                                        obj.termination_state == 1, ...
+                                        obj.termination_state == 2, ...
+                                        obj.termination_state == -1];
                     lin_jerk_matrix(i, j, k) = obj.scores.avg_lin_jerk;
                     ang_jerk_matrix(i, j, k) = obj.scores.avg_ang_jerk;
                     safety_score_matrix(i, j, k) = obj.scores.avg_safety_score; 
                     dist_to_opt_traj_matrix(i, j, k) = obj.scores.avg_dist_to_opt_traj;
                     timestamp_matrix(i, j, k) = timestamp; 
                     num_safety_control_matrix(i, j, k) = num_safety; 
-                    termination_matrix(i, j, k) = obj.termination_state; 
+                    termination_matrix(i, j, k) = obj.termination_state;
+                    reached_matrix(i, j, k) = obj.termination_state == 0; 
+                    crashed_matrix(i, j, k) = obj.termination_state == 1; 
+                    tle_matrix(i, j, k) = obj.termination_state == 2; 
+                    errored_matrix(i, j, k) = obj.termination_state == -1; 
                     exp_name_matrix{i, j, k} = exp_name; 
                     if verbose && obj.termination_state == 1
                        fprintf("Crashed exp: %s\n", exp_name);  

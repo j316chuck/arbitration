@@ -32,7 +32,7 @@ function smoke_test()
                     termination_state = pb.termination_state; 
                 catch
                     exp_name = pb.exp_name; 
-                    termination_state = 3; 
+                    termination_state = -1; 
                     failed_cases{end+1} = pb.exp_name; 
                 end
                 if isempty(termination_state)
