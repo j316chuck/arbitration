@@ -13,9 +13,9 @@ function smoke_test()
         for k = 1:length(all_control_schemes)
             for j = 1:length(all_blend_schemes)
                 % uncomment to run only specific examples
-                if i ~= 5 || k ~= 2 
-                    continue; 
-                end 
+                % if i ~= 5 || k ~= 2 
+                %    continue; 
+                % end 
                 tic;  
                 try 
                     params = default_hyperparams(); 

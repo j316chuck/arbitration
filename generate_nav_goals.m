@@ -1,4 +1,5 @@
-function [starts, goals] = generate_nav_goals(N, min_dist, regen_points)
+function [starts, goals] = generate_nav_goals(N, min_dist, regen_points, seed_num)
+    rng(seed_num);
     if regen_points
         p = default_hyperparams();
         generate_nav_points(p);
@@ -27,9 +28,11 @@ function [starts, goals] = generate_nav_goals(N, min_dist, regen_points)
         d = l2_dist(sx, gx, sy, gy); 
         valid_ind = d >= min_dist;
         sv = ones(sum(valid_ind), 1) * 0.01;
-        ev = zeros(sum(valid_ind), 1) * 0.01;
-        nstarts = [sx(valid_ind)', sy(valid_ind)', st(valid_ind)', sv];
-        ngoals = [gx(valid_ind)', gy(valid_ind)', gt(valid_ind)', ev];
+        sa = zeros(sum(valid_ind), 1);
+        ev = ones(sum(valid_ind), 1) * 0.01;
+        ea = zeros(sum(valid_ind), 1);
+        nstarts = [sx(valid_ind)', sy(valid_ind)', st(valid_ind)', sv, sa];
+        ngoals = [gx(valid_ind)', gy(valid_ind)', gt(valid_ind)', ev, ea];
         starts = [starts; nstarts];
         goals = [goals; ngoals];
         counts = size(starts, 1);

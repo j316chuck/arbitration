@@ -11,8 +11,8 @@ function opener(num)
     %params.hyperparam_str = sprintf("replan_dt_%.3f_zero_levelset_%.3f", params.replan_dt, params.zero_level_set); 
     %params.hyperparam_str = sprintf("replan_dt_%.3f_alpha_value_%.3f", params.replan_dt, params.alpha); 
     params.hyperparam_str = sprintf("replan_dt_%.3f_%s_temp_%.3f", params.replan_dt, params.blend_function, params.temperature); 
-    params.num_alpha_samples = 10; 
-    params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_level_set_%.2f", params.replan_dt, params.num_alpha_samples, params.zero_level_set); 
+    params.num_alpha_samples = 10;
+    params.hyperparam_str = sprintf("replan_dt_%.3f_num_samples_%d_level_set_%.2f", params.replan_dt, params.num_alpha_samples, params.zero_level_set);
     exp.hyperparam_str = params.hyperparam_str; 
     start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
     goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 

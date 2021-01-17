@@ -1,3 +1,10 @@
+# Starting Out
+- Create folders `data` and `outputs` 
+- Run `generate_nav_goals` to create some point nav start and end goals
+- Run `test_blender.m` to run a simple arbitration blending example
+- Run `smoke_test.m` to run key point nav tasks
+- Run `output_analysis.m` to generate plots on the results
+
 # Adding a new control scheme
 - Modify `utils/get_all_control_schemes.m`
 - Modify `default_hyperparams.m`
