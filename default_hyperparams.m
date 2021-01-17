@@ -57,8 +57,8 @@ function [params] = default_hyperparams()
     %% Outputs
     % ============ Output and Caching ============== %
     params.clear_dir = false; 
-    params.run_planner = true; 
-    params.run_brs = true;
+    params.run_planner = false; 
+    params.run_brs = false;
     params.save_plot = true;
     % level 1: every timestamp, level 2: every mpc, level 3: at the end
     params.plot_level = 2;
