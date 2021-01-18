@@ -1,6 +1,6 @@
 # Starting Out
 - Create folders `data` and `outputs` 
-- Run `generate_nav_goals` to create some point nav start and end goals
+- Run `generate_nav_goals.m` to create some point nav start and end goals
 - Run `test_blender.m` to run a simple arbitration blending example
 - Run `runner.m` to run key point nav tasks
 - Run `output_analysis.m` to generate a table for the results
