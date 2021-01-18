@@ -1,5 +1,6 @@
 function [hyperparam_str] = get_hyperparam_string(params)
-    base_str = sprintf("zls_%.3f_replan_dt_%.3f_obs_weight_%.3f", params.zero_level_set, params.replan_dt, params.spline_obs_weight);  
+    base_str = sprintf("grid_%s_zls_%.3f_replan_dt_%.3f_obs_weight_%.3f", ... 
+        params.grid_size, params.zero_level_set, params.replan_dt, params.spline_obs_weight);  
     if strcmp(params.blend_scheme, 'none')
         hyperparam_str = base_str; 
     elseif strcmp(params.blend_scheme, 'safety_value') 
@@ -18,7 +19,8 @@ function [hyperparam_str] = get_hyperparam_string(params)
         hyperparam_str = sprintf("spline_candidates_%.3f_replan_level_set_%.3f_%s", ...
             params.replan_spline_max_num_candidates, params.replan_level_set, base_str); 
     elseif strcmp(params.blend_scheme, 'replan_safe_traj')
-        hyperparam_str = base_str; 
+        hyperparam_str = sprintf("num_mpc_safety_look_ahead_%.2f_%s", ... 
+            params.num_mpc_safety_look_ahead, base_str); 
     else 
         hyperparam_str = base_str; 
         warning("blending scheme not supported");  

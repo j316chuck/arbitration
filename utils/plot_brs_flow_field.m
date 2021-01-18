@@ -1,18 +1,21 @@
+%% Run BRS planner
 repo = what('arbitration');
-% params = default_hyperparams(); 
-% exp = load_exp(params); 
+params = default_hyperparams(); 
+exp = load_exp(params); 
 % exp.brs_planner.solve_brs_avoid(exp.obstacle)
 % brs_planner = exp.brs_planner; 
 % filename = strcat(repo.path, '/data/brs_planner.mat'); 
 % save(filename, 'brs_planner');
 
+%% Load BRS planner
 load(filename, 'brs_planner'); 
 thetas = brs_planner.grid.vs{3};
 
+%% Plot Flow Field
 n = length(thetas);
-m = ceil(n / 4); 
-figure(3);
-clf;
+l = 4;
+m = ceil(n / l); 
+figure(3); 
 set(gcf, 'Position',  [100, 100, 3000, 3000])
 for t=1:n
     theta = thetas(t); 
@@ -32,14 +35,16 @@ for t=1:n
         u1 = [u1, new_state(1) - x(i)]; 
         v1 = [v1, new_state(2) - y(i)];
     end
-    subplot(m, 4, t);
+    subplot(m, l, t);
     hold on;
     title(sprintf('Theta %f', theta));
     xlabel('x(m)');
     ylabel('y(m)');
     quiver(x1, y1, u1, v1, 0, 'DisplayName', 'optimal control');
+    contour(exp.grid_2d.xs{1}, exp.grid_2d.xs{2}, exp.binary_occ_map, ... 
+        [0 0], 'DisplayName', 'binary_obs_map', 'color', 'black');
     contour(x, y, data2d, 'DisplayName', 'value fun', 'color', '#CC1FCB');
-    legend('Location', 'NorthWest');
-    savefig('./brs_planner_avoid_u.fig')
+    legend('Location', 'NorthWest', 'Interpreter', 'None');
+    savefig(strcat(repo.path, '/utils/brs_planner_avoid_u.fig')); 
 end 
 
