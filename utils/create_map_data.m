@@ -8,6 +8,7 @@ function exp = create_map_data(params)
     obs_data_2d = double(obs_data_2d) / 255;
     exp.map_data = map_data;
     exp.obs_data = obs_data_2d;
+    exp.grid_size = params.grid_size; 
 
     %% Resize the occupancy grid to fit the desired grid size
     % create grid representing the raw image 

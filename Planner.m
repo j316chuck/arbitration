@@ -86,10 +86,10 @@ classdef Planner < handle
             if exp.run_brs
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
                 brs_planner = obj.brs_planner;
-                filename = strcat(repo.path, '/data/brs_planner.mat');
+                filename = sprintf("%s/data/%s/brs_planner.mat", repo.path, exp.grid_size); 
                 save(filename, 'brs_planner'); 
             else
-                filename = strcat(repo.path, '/data/brs_planner.mat');
+                filename = sprintf("%s/data/%s/brs_planner.mat", repo.path, exp.grid_size); 
                 load(filename, 'brs_planner'); 
                 obj.brs_planner = brs_planner;
             end 
@@ -97,10 +97,10 @@ classdef Planner < handle
             if exp.run_planner
                 obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt);
                 reach_avoid_planner = obj.reach_avoid_planner;
-                filename = sprintf("%s/data/%s.mat", repo.path, point_nav_str); 
+                filename = sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, point_nav_str); 
                 save(filename, 'reach_avoid_planner'); 
             else
-                filename =  sprintf("%s/data/%s.mat", repo.path, point_nav_str); 
+                filename =  sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, point_nav_str); 
                 load(filename, 'reach_avoid_planner');
                 obj.reach_avoid_planner = reach_avoid_planner;
             end 
@@ -163,8 +163,8 @@ classdef Planner < handle
         %% Update state of robot
         function update_state(obj, x, u, alpha) 
             obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
-            obj.dynSys.updateState(u, obj.dt, x'); % update state
-            obj.state = [obj.dynSys.x', u]; % new state and new control
+            nx = obj.dynSys.updateState(u, obj.dt, x'); % update state
+            obj.state = [nx', u]; % new state and new control
             obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
             obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
         end 
@@ -292,7 +292,7 @@ classdef Planner < handle
  
         function replan_safe_traj(obj, orig_plan)
             new_plan = obj.spline_planner.replan_only_safe_traj(obj.state, ...
-                obj.brs_planner, obj.blending.zero_level_set, obj.num_mpc_steps); %TODO try out obj.num_waypoints
+                obj.brs_planner, obj.blending.zero_level_set, obj.blending.num_mpc_safety_look_ahead); 
             if isempty(new_plan)
                 obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), orig_plan]; 
             else

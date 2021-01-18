@@ -7,7 +7,7 @@ function [exp] = load_exp(params)
     exp.goal = params.goal;
     exp.goal_radius = params.goal_radius;
     exp.stop_goal_dx = 0.5;
-    exp.max_num_planning_pts = 1000;
+    exp.max_num_planning_pts = 500;
     exp.stop_on_collision = true;
     exp.goal_map_2d = shapeCylinder(exp.grid_2d, 3, exp.goal(1:2), exp.goal_radius);
     exp.goal_map_3d = shapeCylinder(exp.grid_3d, 3, exp.goal(1:3), exp.goal_radius); 
@@ -75,7 +75,7 @@ function [exp] = load_exp(params)
     exp.blending.replan_spline_max_num_candidates = params.replan_spline_max_num_candidates;
     exp.blending.blend_function_name = params.blend_function_name;
     exp.blending.blend_function = params.blend_function;
-    
+    exp.blending.num_mpc_safety_look_ahead = params.num_mpc_safety_look_ahead; 
     %% Experiment Params
     exp.hyperparam_str = params.hyperparam_str;
     exp.clear_dir = params.clear_dir; 

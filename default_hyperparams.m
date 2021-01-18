@@ -6,7 +6,9 @@ function [params] = default_hyperparams()
     params.map_name = strcat(repo.path, '/maps/bookstore.png');
     params.gmin_3d = [-10; -10; -pi];
     params.gmax_3d = [5.4; 5.4; pi];
-    params.gnum_3d = [41; 41; 16];
+    %params.gnum_3d = [41; 41; 16]; % med
+    params.gnum_3d = [51; 51; 16]; %med_large 
+    params.grid_size = "med_large"; 
     params.goal_radius = 0.5;
     
     % ============ DynSys ============== %
@@ -22,27 +24,27 @@ function [params] = default_hyperparams()
     % ============ Start and End ============== %
     params.start = [1.5; 1.5; pi/2; 0.01]; %[2; 1; pi/2; 0.01]; %[4; 0; pi/2; 0.01]; %[-9;-9;0;0.01]; 
     
-    params.goal = [4; 3; pi/2; 0.01]; 
+    params.goal = [-4; 0; pi/2; 0.01]; %[4; 3; pi/2; 0.01]; 
     % ============ Blend Scheme ============== %
     %params.blend_scheme = 'time_vary_alpha_open_loop_safety_control'; 
-    params.blend_scheme = 'time_vary_alpha_closed_loop_safety_control'; 
+    %params.blend_scheme = 'time_vary_alpha_closed_loop_safety_control'; 
     %params.blend_scheme = 'safety_value'; 
     %params.blend_scheme = 'safety_control'; 
     %params.blend_scheme = 'sample_safety_value'; 
     %params.blend_scheme = 'sample_safety_control'; 
     %params.blend_scheme = 'replan_waypoint';  
     %params.blend_scheme = 'none';
-    %params.blend_scheme = 'replan_safe_traj';
+    params.blend_scheme = 'replan_safe_traj';
 
     % ============ Control  Scheme ============== %
-    params.control_scheme = 'follow'; 
-    %params.control_scheme = 'switch'; 
+    %params.control_scheme = 'follow'; 
+    params.control_scheme = 'switch'; 
     %params.control_scheme = 'constant'; 
     %params.control_scheme = 'distance';  
     
     % ============ Blending Params ============== %
-    params.replan_dt = 1.5;
-    params.zero_level_set = 0.2;
+    params.replan_dt = 0.5;
+    params.zero_level_set = 0.0;
     params.replan_level_set = 0.3; 
     params.replan_spline_max_num_candidates = 10; 
     params.alpha = 0.8;
@@ -52,8 +54,9 @@ function [params] = default_hyperparams()
     params.num_alpha_samples = 10; 
     params.spline_obs_weight = 1;  
     params.blend_function = @(v) max(min(1, v), 0);
+    params.num_mpc_safety_look_ahead = 15; 
+    % ============ Get Hyperparam String ============== %
     params.hyperparam_str = get_hyperparam_string(params); 
-
     %% Outputs
     % ============ Output and Caching ============== %
     params.clear_dir = false; 
