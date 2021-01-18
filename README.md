@@ -2,8 +2,9 @@
 - Create folders `data` and `outputs` 
 - Run `generate_nav_goals` to create some point nav start and end goals
 - Run `test_blender.m` to run a simple arbitration blending example
-- Run `smoke_test.m` to run key point nav tasks
-- Run `output_analysis.m` to generate plots on the results
+- Run `runner.m` to run key point nav tasks
+- Run `output_analysis.m` to generate a table for the results
+- Run `plot_trajectories.m` to view each algorithm run on a point nav task
 
 # Adding a new control scheme
 - Modify `utils/get_all_control_schemes.m`
