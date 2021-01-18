@@ -2,21 +2,11 @@ function runner()
     %% Set up experiment parameters
     N = 100; 
     no_rerun = true; 
-    run_smoke_test = true; 
     run_planners = false; 
     blend_schemes = get_key_blend_schemes();    
     control_schemes = get_all_control_schemes();   
-    
-    %% Load up test cases
-    repo = what("arbitration"); 
-    if run_smoke_test
-        [starts, goals] = get_all_smoke_test_cases(); 
-    else 
-        path = strcat(repo.path, '/data/sampled_goals.mat'); 
-        load(path, 'starts', 'goals'); 
-        starts = num2cell(starts', 1); 
-        goals = num2cell(goals', 1); 
-    end
+    nav_task_type = "sampled"; %"smoke";  
+    [starts, goals] = get_point_nav_tasks(nav_task_type); 
     
     %% Run Reach Avoid and BRS Planners
     if run_planners
@@ -35,7 +25,7 @@ function runner()
         for k = 1:length(control_schemes)
             for j = 1:length(blend_schemes)
                 tic;  
-                try 
+                try
                     params = default_hyperparams(); 
                     params.start = starts{i};
                     params.goal = goals{i};
@@ -53,11 +43,11 @@ function runner()
                     pb.blend_plans(); 
                     exp_name = pb.exp_name; 
                     termination_state = pb.termination_state; 
-               catch
+                catch 
                     exp_name = pb.exp_name; 
                     termination_state = -1; 
                     failed_cases{end+1} = pb.exp_name; 
-                end
+                end 
                 if isempty(termination_state)
                     termination_state = -1;     
                 end 

@@ -1,4 +1,4 @@
-function test_safety_blend()
+function plot_alpha_vs_safety_score()
     exp_types = {
         'blending_scheme_probabilistic_blend_safety_control_traj_replan_dt_1.500_num_samples_20_use_safe_1_level_set_0.20_spline_obs_weight_1.000000'
     };

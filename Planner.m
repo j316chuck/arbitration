@@ -708,7 +708,7 @@ classdef Planner < handle
             q.HandleVisibility = 'on';
             q.ShowArrowHead = 'on';
             q.AutoScale = 'on';
-            q.AutoScaleFactor = 0.3;
+            q.AutoScaleFactor = 0.1;
         end
 
         function plot_traj_probs(obj, xs, ys, ths, probs, name)
@@ -720,7 +720,7 @@ classdef Planner < handle
             q.ShowArrowHead = 'on';
             q.AutoScale = 'on';
             q.DisplayName = name;
-            q.AutoScaleFactor = 0.3;
+            q.AutoScaleFactor = 0.1;
         end
         
         function set_quiver_colors(obj, q, probs)

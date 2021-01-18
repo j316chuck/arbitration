@@ -1,24 +1,28 @@
 function plot_trajectories(index)
     %% Change these parameters
-    repo = what("arbitration"); 
-    output_folder = strcat(repo.path, '/outputs'); 
-    results_folder = strcat(repo.path, '/outputs/results');
-    [starts, goals] = get_all_smoke_test_cases(); 
+    output_name = "/outputs"; 
+    nav_task_type = "sampled"; %"smoke";  
+    [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
-    blend_schemes = get_key_blend_schemes(); 
-    colors = get_all_blend_scheme_colors(); 
+    blend_schemes = get_key_blend_schemes();
+    labels = get_key_blend_scheme_labels(); 
+    colors = get_all_blend_scheme_colors();     
     Nc = length(control_schemes); 
     Nb = length(blend_schemes); 
     start = starts{index};  
     goal = goals{index};
-    title_str = "key_blend_switch"; 
+    title_str = "key_blending_schemes_switch_control"; 
 
-
-    %% Extract data 
+    %% Extract Data Paths
+    repo = what("arbitration"); 
+    output_folder = strcat(repo.path, output_name); 
+    results_folder = strcat(repo.path, output_name, '/results');
     dirs = dir(fullfile(output_folder));
     st = sprintf("start_[%.2f %.2f %.2f]", start(1), start(2), start(3)); 
     go = sprintf("goal_[%.2f %.2f %.2f]", goal(1), goal(2), goal(3));
     plot_name = sprintf("%s %s %s", title_str, st, go); 
+    
+    %% Plot Trajectories
     clf
     figure(1); 
     hold on; 
@@ -29,10 +33,10 @@ function plot_trajectories(index)
             cs = control_schemes{j};
             bs = blend_schemes{k}; 
             alg_name = sprintf("blend_%s_control_%s", bs, cs); 
-            legend_name = sprintf("%s_%s", bs, cs); 
+            legend_name = labels{k}; 
             exp_name = sprintf("%s_%s_%s", st, go, alg_name); 
             exp_ran = false; 
-            zls_theta = 0; 
+            zls_theta = calc_zls_theta(start, goal); 
             for it = 1:length(dirs)
                 exp_folder = dirs(it, :); 
                 if ~contains(exp_folder.name, exp_name)
@@ -43,14 +47,7 @@ function plot_trajectories(index)
                     continue;
                 end 
                 load(f, 'obj');
-                if obj.termination_state == -1
-                    fprintf("Exp %s errored", exp_name); 
-                elseif obj.termination_state == 1
-                    fprintf("Exp %s crashed", exp_name); 
-                elseif obj.termination_state == 2
-                    fprintf("Exp %s tle", exp_name); 
-                end 
-                exp_ran = true; 
+                log_failed_experiments(obj, exp_name); 
                 if first_iteration
                     first_iteration = false;
                     plot_env(obj);
@@ -59,28 +56,48 @@ function plot_trajectories(index)
                 end 
                 plot_traj(obj.blend_traj, legend_name, color); 
                 set_plot_params(plot_name);
+                exp_ran = true; 
             end 
             if ~exp_ran
                 fprintf("Missing exp: %s\n", exp_name); 
             end 
         end 
     end 
-    figpath = strcat(results_folder, "/", plot_name, ".fig"); 
-    savefig(figpath); 
+    plot_path = strcat(results_folder, "/", plot_name); 
+    fig_path = strcat(plot_path, ".fig"); 
+    png_path = strcat(plot_path, ".png");
+    savefig(fig_path); 
+    saveas(gcf, png_path); 
+end
+
+function theta = calc_zls_theta(start, goal)
+    dy = goal(2) - start(2);
+    dx = goal(1) - start(1);
+    theta = atan(dy/dx); 
 end 
+
+function log_failed_experiments(obj, exp_name)
+    if obj.termination_state == -1
+        fprintf("Exp %s errored\n", exp_name); 
+    elseif obj.termination_state == 1
+        fprintf("Exp %s crashed\n", exp_name); 
+    elseif obj.termination_state == 2
+        fprintf("Exp %s tle\n", exp_name); 
+    end 
+end
 
 function plot_traj(blend_traj, name, color)
     xs = blend_traj(1, :); 
     ys = blend_traj(2, :); 
     ths = blend_traj(3, :);  
-    s = scatter(xs, ys, 15, 'black', 'filled', 'DisplayName', name);
+    s = scatter(xs, ys, 5, 'black', 'filled', 'DisplayName', name);
     s.HandleVisibility = 'off';
     q = quiver(xs, ys, cos(ths), sin(ths), 'Color', color);
     q.DisplayName = name;
     q.HandleVisibility = 'on';
     q.ShowArrowHead = 'on';
     q.AutoScale = 'on';
-    q.AutoScaleFactor = 0.3;
+    q.AutoScaleFactor = 0.1;
 end 
 
 function set_plot_params(name)
@@ -90,7 +107,8 @@ function set_plot_params(name)
     xlabel('x (meters)');
     ylabel('y (meters)');
     l = legend('Location', 'SouthWest');
-    set(l, 'Interpreter', 'none')
+    set(l, 'Interpreter', 'none', 'fontsize', 5);
+    set(l,'position', [0.27 0.78 0.02 0.02]);
     title(name, 'Interpreter', 'None');
 end 
 
