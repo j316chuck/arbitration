@@ -2,7 +2,7 @@ function runner()
     %% Set up experiment parameters
     N = 100; 
     no_rerun = true; 
-    run_planners = false; 
+    run_planners = true; 
     blend_schemes = {'none', 'replan_safe_traj'};    
     control_schemes = {'switch'};   
     nav_task_type = "sampled"; %"smoke";  
@@ -10,7 +10,7 @@ function runner()
     
     %% Run Reach Avoid and BRS Planners
     if run_planners
-        run_and_cache_planners(1, starts, goals); 
+        run_and_cache_planners(N, starts, goals); 
     end
     
     %% Run all experiments
@@ -21,7 +21,7 @@ function runner()
     exp_name = ""; 
     termination_state = -1;
     zlsets = [0.05, 0.15]; 
-    replan_dts = [0.5, 1,5]; 
+    replan_dts = [0.5, 1.5]; 
     for zli = 1:length(zlsets)
         for rdt = 1:length(replan_dts)
             for i = 1:length(starts)

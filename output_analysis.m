@@ -1,4 +1,4 @@
-function output_analysis()  
+function hyperparam_analysis()  
     %% Change these parameters
     verbose = true;
     repo = what("arbitration"); 
@@ -31,25 +31,26 @@ function [metrics, lin_jerk_matrix, ang_jerk_matrix, safety_score_matrix, ...
         num_safety_control_matrix, termination_matrix, exp_name_matrix ...
         crashed_matrix, reached_matrix, tle_matrix, errored_matrix] = ... 
         get_metrics(output_folder, starts, goals, control_schemes, blend_schemes, verbose)   
-    Ns = 40; % start and goal pairs
+    Ns = 30; % start and goal pairs
     Nc = length(control_schemes); % control scheme
     Nb = length(blend_schemes); % blend scheme
+    Nh = 4; 
     Nm = 11; % num metrics
     
     %% Set Default Values
-    metrics = -ones(Ns, Nc, Nb, Nm); 
-    lin_jerk_matrix = -ones(Ns, Nc, Nb);
-    ang_jerk_matrix = -ones(Ns, Nc, Nb);
-    safety_score_matrix = -ones(Ns, Nc, Nb);
-    dist_to_opt_traj_matrix = -ones(Ns, Nc, Nb);
-    timestamp_matrix = -ones(Ns, Nc, Nb);
-    num_safety_control_matrix = -ones(Ns, Nc, Nb);
-    termination_matrix = -ones(Ns, Nc, Nb);
-    exp_name_matrix = cell(Ns, Nc, Nb); 
-    reached_matrix = zeros(Ns, Nc, Nb); 
-    crashed_matrix = zeros(Ns, Nc, Nb); 
-    tle_matrix = zeros(Ns, Nc, Nb); 
-    errored_matrix = zeros(Ns, Nc, Nb); 
+    metrics = -ones(Ns, Nc, Nb, Nh, Nm); 
+    lin_jerk_matrix = -ones(Ns, Nc, Nb, Nh);
+    ang_jerk_matrix = -ones(Ns, Nc, Nb, Nh);
+    safety_score_matrix = -ones(Ns, Nc, Nb, Nh);
+    dist_to_opt_traj_matrix = -ones(Ns, Nc, Nb, Nh);
+    timestamp_matrix = -ones(Ns, Nc, Nb, Nh);
+    num_safety_control_matrix = -ones(Ns, Nc, Nb, Nh);
+    termination_matrix = -ones(Ns, Nc, Nb, Nh);
+    exp_name_matrix = cell(Ns, Nc, Nb, Nh); 
+    reached_matrix = zeros(Ns, Nc, Nb, Nh); 
+    crashed_matrix = zeros(Ns, Nc, Nb, Nh); 
+    tle_matrix = zeros(Ns, Nc, Nb, Nh); 
+    errored_matrix = zeros(Ns, Nc, Nb, Nh); 
     
     %% Extract Data
     dirs = dir(fullfile(output_folder));
