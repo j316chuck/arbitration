@@ -2,7 +2,7 @@ function hyperparam_analysis()
     %% Change these parameters
     verbose = true;
     repo = what("arbitration"); 
-    output_folder = strcat(repo.path, '/outputs');
+    output_folder = strcat(repo.path, '/outputs/');
     results_folder = strcat(output_folder, '/results');
     output_mat_path = sprintf("%s/%s", results_folder, 'output_analysis.mat');
     output_csv_path = sprintf("%s/%s", results_folder, 'output_analysis.csv'); 

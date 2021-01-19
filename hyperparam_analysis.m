@@ -2,17 +2,17 @@ function hyperparam_analysis()
     %% Change these parameters
     verbose = true;
     repo = what("arbitration"); 
-    output_folder = strcat(repo.path, '/outputs');
+    output_folder = strcat(repo.path, '/outputs/');
     results_folder = strcat(output_folder, '/results');
     output_mat_path = sprintf("%s/%s", results_folder, 'output_analysis.mat');
     output_csv_path = sprintf("%s/%s", results_folder, 'output_analysis.csv'); 
     if ~exist(results_folder, 'dir')
         mkdir(results_folder); 
     end
-    [starts, goals] = get_point_nav_tasks("sampled"); %"smoke_test"
     control_schemes = {'switch'};
     blend_schemes = {'none', 'replan_safe_traj'}; 
-    params = get_replan_zls_hyperparams();
+    [starts, goals] = get_point_nav_tasks("sampled"); %"sampled" %"smoke_test"
+    params = get_hyperparam_sets("replan_zls"); %"default"
 
     %% Get metrics
      [metrics, exp_names] = get_metrics(output_folder, ... 
@@ -87,14 +87,14 @@ function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...
                         if verbose && obj.termination_state == -1
                            fprintf("Errored exp: %s\n", exp_name);  
                         elseif verbose && obj.termination_state == 1
-                           % fprintf("Crashed exp: %s\n", exp_name);  
+                           fprintf("Crashed exp: %s\n", exp_name);  
                         elseif verbose && obj.termination_state == 2
-                           % fprintf("Tle exp: %s\n", exp_name); 
+                           fprintf("Tle exp: %s\n", exp_name); 
                         end
                         exp_ran = true;
                     end 
                     if ~exp_ran
-                        %fprintf("Skipped %s\n", exp_name); 
+                        fprintf("Skipped %s\n", exp_name); 
                     end
                 end
             end
