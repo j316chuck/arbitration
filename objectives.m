@@ -56,9 +56,9 @@ classdef objectives < handle
             jy = ay(2:length(ay)) - ay(1:length(ay) - 1); 
             obj.lin_vel = 1/dt .* obj.l2_dist(vx, vy); 
             obj.avg_lin_vel = mean(obj.lin_vel);
-            obj.lin_accel = 1/dt .* obj.l2_dist(ax, ay); 
+            obj.lin_accel = 1/(dt * dt) .* obj.l2_dist(ax, ay); 
             obj.avg_lin_accel = mean(obj.lin_accel); 
-            obj.lin_jerk =  1/dt .* obj.l2_dist(jx, jy);
+            obj.lin_jerk =  1/(dt * dt * dt) .* obj.l2_dist(jx, jy);
             obj.avg_lin_jerk = mean(obj.lin_accel);  
         end 
 
@@ -66,9 +66,9 @@ classdef objectives < handle
             n = length(ang_vel);
             obj.ang_vel = ang_vel; 
             obj.avg_lin_vel = mean(abs(obj.ang_vel));
-            obj.ang_accel = 1/dt .* (ang_vel(2:n) - ang_vel(1:n-1)); 
+            obj.ang_accel = 1/(dt * dt) .* (ang_vel(2:n) - ang_vel(1:n-1)); 
             obj.avg_ang_accel = mean(abs(obj.ang_accel)); 
-            obj.ang_jerk =  1/dt .* (obj.ang_accel(2:n-1) - obj.ang_accel(1:n-2));
+            obj.ang_jerk =  1/(dt * dt * dt) .* (obj.ang_accel(2:n-1) - obj.ang_accel(1:n-2));
             obj.avg_ang_jerk = mean(abs(obj.ang_jerk));  
         end 
         

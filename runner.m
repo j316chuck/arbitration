@@ -2,7 +2,7 @@ function runner(start_pos)
     %% Set up experiment parameters
     no_rerun = true; 
     run_planners = false; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control'};    
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};    
     control_schemes = {'switch'};   
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
