@@ -1,5 +1,5 @@
 function plot_trajectories_all()
-    for i = 1:40
+    for i = 1:20
         plot_trajectories(i);
     end 
 end 

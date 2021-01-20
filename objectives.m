@@ -65,11 +65,11 @@ classdef objectives < handle
         function obj = calc_angular_kinematics(obj, ang_vel, dt)
             n = length(ang_vel);
             obj.ang_vel = ang_vel; 
-            obj.avg_lin_vel = mean(obj.ang_vel);
+            obj.avg_lin_vel = mean(abs(obj.ang_vel));
             obj.ang_accel = 1/dt .* (ang_vel(2:n) - ang_vel(1:n-1)); 
-            obj.avg_ang_accel = mean(obj.ang_accel); 
+            obj.avg_ang_accel = mean(abs(obj.ang_accel)); 
             obj.ang_jerk =  1/dt .* (obj.ang_accel(2:n-1) - obj.ang_accel(1:n-2));
-            obj.avg_ang_jerk = mean(obj.ang_jerk);  
+            obj.avg_ang_jerk = mean(abs(obj.ang_jerk));  
         end 
         
         function obj = calc_dist_to_goal(obj, x, y, goal)

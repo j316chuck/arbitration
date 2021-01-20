@@ -10,9 +10,9 @@ function hyperparam_analysis()
         mkdir(results_folder); 
     end
     control_schemes = {'switch'};
-    blend_schemes = {'none', 'replan_safe_traj'}; 
+    blend_schemes = {'none', 'replan_safe_traj', 'time_vary_alpha_open_loop_safety_control', 'sample_safety_control'};
     [starts, goals] = get_point_nav_tasks("sampled"); %"sampled" %"smoke_test"
-    params = get_hyperparam_sets("replan_zls"); %"default"
+    params = get_hyperparam_sets("default"); %"replan_zls"
 
     %% Get metrics
      [metrics, exp_names] = get_metrics(output_folder, ... 
@@ -94,7 +94,7 @@ function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...
                         exp_ran = true;
                     end 
                     if ~exp_ran
-                        fprintf("Skipped %s\n", exp_name); 
+                        fprintf("Skipped %s index %d\n", exp_name, i); 
                     end
                 end
             end
@@ -130,7 +130,7 @@ function write_metrics_table(metrics, control_schemes, blend_schemes, params, cs
         'Algorithm', ...
         'Num Reached Goal', ...
         'Num Crashed', ...
-        'Num TLE', ...
+        'Num Time Exceeded', ...
         'Num Errored', ...
         'Num Total Experiments', ...
         'Avg Lin Jerk', ...
@@ -149,9 +149,9 @@ function write_metrics_table(metrics, control_schemes, blend_schemes, params, cs
     
     %% Aggregate and log experiment run statistics
     index = 0; 
-    for h = 1:length(params)
-        for j = 1:length(control_schemes)
-            for k = 1:length(blend_schemes)
+    for j = 1:length(control_schemes)
+        for k = 1:length(blend_schemes)
+             for h = 1:length(params)
                 index = index + 1; 
                 hs = params{h}.hyperparam_str; 
                 bs = blend_schemes{k}; 

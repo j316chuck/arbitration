@@ -44,7 +44,7 @@ function [params] = default_hyperparams()
     
     % ============ Blending Params ============== %
     params.replan_dt = 0.5;
-    params.zero_level_set = 0.0;
+    params.zero_level_set = 0.15;
     params.replan_level_set = 0.3; 
     params.replan_spline_max_num_candidates = 10; 
     params.alpha = 0.8;

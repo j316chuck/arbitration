@@ -4,9 +4,11 @@ function plot_trajectories(index)
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
-    blend_schemes = get_key_blend_schemes();
-    labels = get_key_blend_scheme_labels(); 
-    colors = get_all_blend_scheme_colors();     
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};
+    labels = {'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; 
+    colors = get_all_blend_scheme_colors();    
+    hyperparam_sets = get_hyperparam_sets("default"); 
+    Nh = length(hyperparam_sets); 
     Nc = length(control_schemes); 
     Nb = length(blend_schemes); 
     start = starts{index};  
@@ -27,39 +29,51 @@ function plot_trajectories(index)
     figure(1); 
     hold on; 
     first_iteration = true;
-    for j = 1:Nc
-        for k = 1:Nb
-            color = colors(k, :); 
-            cs = control_schemes{j};
-            bs = blend_schemes{k}; 
-            alg_name = sprintf("blend_%s_control_%s", bs, cs); 
-            legend_name = labels{k}; 
-            exp_name = sprintf("%s_%s_%s", st, go, alg_name); 
-            exp_ran = false; 
-            zls_theta = calc_zls_theta(start, goal); 
-            for it = 1:length(dirs)
-                exp_folder = dirs(it, :); 
-                if ~contains(exp_folder.name, exp_name)
-                   continue;
+    for h = 1:Nh
+        for j = 1:Nc
+            for k = 1:Nb
+                params = hyperparam_sets{h};  
+                params.start = start;
+                params.goal = goal;
+                bs = blend_schemes{k}; 
+                cs = control_schemes{j}; 
+                color = colors(k, :); 
+                params.blend_scheme = blend_schemes{k}; 
+                params.control_scheme = control_schemes{j}; 
+                params.hyperparam_str = get_hyperparam_string(params); 
+                params.run_planner = false;
+                params.run_brs = false; 
+                exp = load_exp(params); 
+                pb = Planner(exp);
+                alg_name = sprintf("blend_%s_control_%s", bs, cs); 
+                legend_name = labels{k}; 
+                exp_name = pb.exp_name; 
+                exp_ran = false; 
+                zls_theta = calc_zls_theta(start, goal); 
+                for it = 1:length(dirs)
+                    exp_folder = dirs(it, :); 
+                    if ~contains(exp_folder.name, exp_name)
+                       continue;
+                    end 
+                    f = fullfile(exp_folder.folder, exp_folder.name, 'final_state.mat');
+                    if ~isfile(f)
+                        continue;
+                    end 
+                    load(f, 'obj');
+                    log_failed_experiments(obj, exp_name); 
+                    if first_iteration
+                        first_iteration = false;
+                        plot_env(obj);
+                        plot_zls(obj, zls_theta); 
+                        plot_traj(obj.reach_avoid_planner.opt_traj, 'reach avoid', 'green'); 
+                    end 
+                    plot_traj(obj.blend_traj, legend_name, color); 
+                    set_plot_params(plot_name);
+                    exp_ran = true; 
                 end 
-                f = fullfile(exp_folder.folder, exp_folder.name, 'final_state.mat');
-                if ~isfile(f)
-                    continue;
+                if ~exp_ran
+                    fprintf("Missing exp: %s\n", exp_name); 
                 end 
-                load(f, 'obj');
-                log_failed_experiments(obj, exp_name); 
-                if first_iteration
-                    first_iteration = false;
-                    plot_env(obj);
-                    plot_zls(obj, zls_theta); 
-                    plot_traj(obj.reach_avoid_planner.opt_traj, 'reach avoid', 'green'); 
-                end 
-                plot_traj(obj.blend_traj, legend_name, color); 
-                set_plot_params(plot_name);
-                exp_ran = true; 
-            end 
-            if ~exp_ran
-                fprintf("Missing exp: %s\n", exp_name); 
             end 
         end 
     end 
