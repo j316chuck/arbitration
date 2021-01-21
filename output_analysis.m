@@ -9,14 +9,14 @@ function output_analysis()
         mkdir(results_folder); 
     end
     control_schemes = {'switch'};
-    blend_schemes = {'none', 'replan_safe_traj', 'time_vary_alpha_open_loop_safety_control', 'sample_safety_control'};
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control'};
     [starts, goals] = get_point_nav_tasks("sampled"); %"sampled" %"smoke_test"
-    params = get_hyperparam_sets("default"); %"replan_zls"
+    params = get_hyperparam_sets("time_vary_alpha_open"); %"default" %"replan_zls"
 
     %% Get metrics
-     [metrics, exp_names] = get_metrics(output_folder, ... 
-         starts, goals, control_schemes, blend_schemes, params, verbose);
-    save(output_mat_path, 'metrics', 'exp_names'); 
+%      [metrics, exp_names] = get_metrics(output_folder, ... 
+%          starts, goals, control_schemes, blend_schemes, params, verbose);
+%     save(output_mat_path, 'metrics', 'exp_names'); 
     
     %% Write table
     load(output_mat_path, 'metrics'); 
@@ -26,7 +26,6 @@ function output_analysis()
     write_metrics_table(metrics, control_schemes, blend_schemes, params, ar_output_csv_path, true, true, verbose); 
     write_metrics_table(metrics, control_schemes, blend_schemes, params, rg_output_csv_path, false, true, verbose); 
     write_metrics_table(metrics, control_schemes, blend_schemes, params, output_csv_path, false, false, verbose); 
-
 end
 
 function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...

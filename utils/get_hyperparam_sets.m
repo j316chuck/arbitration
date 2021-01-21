@@ -23,6 +23,7 @@ function params = get_hyperparams_time_vary_alpha_open()
     params = cell(Ne, 1);
     for i = 1:length(blend_function_names)
         p = default_hyperparams(); 
+        p.blend_scheme = "time_vary_alpha_open_loop_safety_control"; 
         p.blend_function_name = blend_function_names{i}; 
         p.blend_function = get_alpha_blend_function(p.blend_function_name);  
         p.hyperparam_str = get_hyperparam_string(p); 

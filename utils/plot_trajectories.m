@@ -4,10 +4,11 @@ function plot_trajectories(index)
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};
-    labels = {'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; 
-    colors = get_all_blend_scheme_colors();    
-    hyperparam_sets = get_hyperparam_sets("default"); 
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control'}; %{'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};
+    labels = get_all_alpha_blend_function_names(); %{'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; 
+    colors = get_all_blend_scheme_colors();
+    hyperparam_str = "time_vary_alpha_open"; 
+    hyperparam_sets = get_hyperparam_sets(hyperparam_str); 
     Nh = length(hyperparam_sets); 
     Nc = length(control_schemes); 
     Nb = length(blend_schemes); 
@@ -37,7 +38,7 @@ function plot_trajectories(index)
                 params.goal = goal;
                 bs = blend_schemes{k}; 
                 cs = control_schemes{j}; 
-                color = colors(k, :); 
+                color = colors(h, :); 
                 params.blend_scheme = blend_schemes{k}; 
                 params.control_scheme = control_schemes{j}; 
                 params.hyperparam_str = get_hyperparam_string(params); 
@@ -46,7 +47,7 @@ function plot_trajectories(index)
                 exp = load_exp(params); 
                 pb = Planner(exp);
                 alg_name = sprintf("blend_%s_control_%s", bs, cs); 
-                legend_name = labels{k}; 
+                legend_name = labels{h}; %labels{k}; 
                 exp_name = pb.exp_name; 
                 exp_ran = false; 
                 zls_theta = calc_zls_theta(start, goal); 
