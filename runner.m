@@ -1,19 +1,27 @@
-function runner(start_pos)
+function runner(start_pos, end_pos)
     %% Set up experiment parameters
     no_rerun = true; 
     run_planners = false; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control'};    
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};  
     control_schemes = {'switch'};   
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
-    hyperparam_set_type = "time_vary_alpha_open"; %"default"; %"replan_zls";  
+    hyperparam_set_type = "default"; %"time_vary_alpha_open"; %"default"; %"replan_zls";  
     hyperparam_sets = get_hyperparam_sets(hyperparam_set_type); 
+    N = length(starts); 
     
     %% Run Reach Avoid and BRS Planners
     if run_planners
-        N = length(starts); 
         run_and_cache_planners(N, starts, goals); 
     end
+    
+    %% Extra checks for valid inputs
+    if end_pos > N 
+        end_pos = N; 
+    end 
+    if start_pos > N || start_pos < 1
+        return 
+    end 
     
     %% Run all experiments
     exp_names = {}; 
@@ -22,7 +30,7 @@ function runner(start_pos)
     elapsed_time = [];
     exp_name = ""; 
     termination_state = -1;
-    for i = start_pos:length(starts)
+    for i = start_pos:end_pos
         for h = 1:length(hyperparam_sets) 
             for k = 1:length(control_schemes)
                 for j = 1:length(blend_schemes)

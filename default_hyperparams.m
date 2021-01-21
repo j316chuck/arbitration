@@ -43,7 +43,7 @@ function [params] = default_hyperparams()
     %params.control_scheme = 'distance';  
     
     % ============ Blending Params ============== %
-    params.replan_dt = 1.0;
+    params.replan_dt = 0.5;
     params.zero_level_set = 0.15;
     params.replan_level_set = 0.3; 
     params.replan_spline_max_num_candidates = 10; 
@@ -51,7 +51,7 @@ function [params] = default_hyperparams()
     params.temperature = 0.2;
     params.num_alpha_samples = 10; 
     params.spline_obs_weight = 1;  
-    params.blend_function_name = "x"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3"
+    params.blend_function_name = "exp_x"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3"
     params.blend_function = get_alpha_blend_function(params.blend_function_name);
     params.num_mpc_safety_look_ahead = 15; 
     % ============ Get Hyperparam String ============== %
