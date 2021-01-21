@@ -2,11 +2,11 @@ function runner(start_pos)
     %% Set up experiment parameters
     no_rerun = true; 
     run_planners = false; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};    
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control'};    
     control_schemes = {'switch'};   
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
-    hyperparam_set_type = "default"; %"replan_zls";  
+    hyperparam_set_type = "time_vary_alpha_open"; %"default"; %"replan_zls";  
     hyperparam_sets = get_hyperparam_sets(hyperparam_set_type); 
     
     %% Run Reach Avoid and BRS Planners

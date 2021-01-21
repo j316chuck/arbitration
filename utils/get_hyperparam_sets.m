@@ -2,7 +2,9 @@ function params = get_hyperparam_sets(name)
     if strcmp(name, "replan_zls")
         params = get_hyperparams_replan_zls(); 
     elseif strcmp(name, "default")
-        params = get_default_hyperparams(); 
+        params = get_default_hyperparams();
+    elseif strcmp(name, "time_vary_alpha_open")
+        params = get_hyperparams_time_vary_alpha_open(); 
     else 
         warning("No hyperparameter set of name %s", name);
         params = {}; 
@@ -12,6 +14,20 @@ end
 %% Default Hyperparameters
 function params = get_default_hyperparams()
     params = {default_hyperparams()}; 
+end 
+
+%% Grid search time vary alpha open blend function
+function params = get_hyperparams_time_vary_alpha_open()
+    blend_function_names = get_all_alpha_blend_function_names(); 
+    Ne = length(blend_function_names); 
+    params = cell(Ne, 1);
+    for i = 1:length(blend_function_names)
+        p = default_hyperparams(); 
+        p.blend_function_name = blend_function_names{i}; 
+        p.blend_function = get_alpha_blend_function(p.blend_function_name);  
+        p.hyperparam_str = get_hyperparam_string(p); 
+        params{i} = p; 
+    end
 end 
 
 %% Grid Search Replan Dt and Zls

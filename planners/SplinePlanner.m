@@ -474,7 +474,7 @@ classdef SplinePlanner < handle
         function [opt_spline, opt_alphas] = open_loop_replan_with_value_blending(obj, start, ...
                                                         traj_xs, traj_ys, ...
                                                         safe_xs, safe_ys, ...
-                                                        brs_planner)
+                                                        brs_planner, blend_function)
             %figure(8);
             %clf(8)
             obj.start = start;
@@ -518,7 +518,7 @@ classdef SplinePlanner < handle
                     
                     % Get a vector of the safety values at each planned state
                     raw_alphas_along_spline = brs_planner.get_value(spline_vec);
-                    alphas_along_spline = min(max(raw_alphas_along_spline, 0), 1);
+                    alphas_along_spline = blend_function(raw_alphas_along_spline);
                     
                     % Compute weighted plan-relevant part of objective: 
                     %   alpha(x_t) * || x_t - x^plan_t || for all times
@@ -574,7 +574,7 @@ classdef SplinePlanner < handle
         %  
         function [opt_spline, opt_alphas] = closed_loop_replan_with_value_blending(obj, start, ...
                                                         traj_xs, traj_ys, ...
-                                                        brs_planner)
+                                                        brs_planner, blend_function)
             %figure(8);
             %clf(8)
             obj.start = start;
@@ -618,7 +618,7 @@ classdef SplinePlanner < handle
                     
                     % Get a vector of the safety values at each planned state
                     raw_alphas_along_spline = brs_planner.get_value(spline_vec);                    
-                    alphas_along_spline = min(max(raw_alphas_along_spline, 0), 1);
+                    alphas_along_spline = blend_function(raw_alphas_along_spline);
 
                     % Compute weighted plan-relevant part of objective: 
                     %   alpha(x_t) * || x_t - x^plan_t || for all times

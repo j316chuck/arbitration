@@ -49,11 +49,10 @@ function [params] = default_hyperparams()
     params.replan_spline_max_num_candidates = 10; 
     params.alpha = 0.8;
     params.temperature = 0.2;
-    params.blend_function_name = 'reg_sig'; %'sub' %'identity'
-    params.blend_function = @(v) 1 / (1 + exp(v/params.temperature));
     params.num_alpha_samples = 10; 
     params.spline_obs_weight = 1;  
-    params.blend_function = @(v) max(min(1, v), 0);
+    params.blend_function_name = "x"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3"
+    params.blend_function = get_alpha_blend_function(params.blend_function_name);
     params.num_mpc_safety_look_ahead = 15; 
     % ============ Get Hyperparam String ============== %
     params.hyperparam_str = get_hyperparam_string(params); 

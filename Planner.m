@@ -222,7 +222,7 @@ classdef Planner < handle
         
         function replan_time_vary_alpha_open_loop_safety_control(obj, plan, safety_plan)
             [new_plan, new_alphas] = obj.spline_planner.open_loop_replan_with_value_blending(obj.state, ...
-                plan{1}, plan{2}, safety_plan(1, :), safety_plan(2, :), obj.brs_planner);
+                plan{1}, plan{2}, safety_plan(1, :), safety_plan(2, :), obj.brs_planner, obj.blending.blend_function);
             next_plan = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; new_alphas'];  
             % ========== DEBUGGING! =========== %                          
             % obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
@@ -230,9 +230,9 @@ classdef Planner < handle
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_plan]; 
         end 
         
-        function replan_time_vary_alpha_closed_loop_safety_control(obj, plan, safety_plan)
+        function replan_time_vary_alpha_closed_loop_safety_control(obj, plan)
             [new_plan, new_alphas] = obj.spline_planner.closed_loop_replan_with_value_blending(obj.state, ...
-                plan{1}, plan{2}, obj.brs_planner);
+                plan{1}, plan{2}, obj.brs_planner, obj.blending.blend_function);
             next_plan = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; new_alphas'];  
             % ========== DEBUGGING! =========== %                          
             % obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
@@ -328,7 +328,7 @@ classdef Planner < handle
             elseif strcmp(obj.blend_scheme, 'time_vary_alpha_open_loop_safety_control')
                 obj.replan_time_vary_alpha_open_loop_safety_control(plan, safety_plan); 
             elseif strcmp(obj.blend_scheme, 'time_vary_alpha_closed_loop_safety_control')
-                obj.replan_time_vary_alpha_closed_loop_safety_control(plan, safety_plan); 
+                obj.replan_time_vary_alpha_closed_loop_safety_control(plan); 
             elseif strcmp(obj.blend_scheme, 'replan_waypoint')
                 obj.replan_waypoint(plan); 
             elseif strcmp(obj.blend_scheme, 'replan_safe_traj')
