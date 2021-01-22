@@ -1,6 +1,7 @@
 function runner(start_pos, end_pos)
     %% Set up experiment parameters
     no_rerun = true; 
+    dry_run = false; 
     run_planners = false; 
     blend_schemes = {'time_vary_alpha_open_loop_safety_control'};    
     control_schemes = {'switch'};   
@@ -40,7 +41,7 @@ function runner(start_pos, end_pos)
                         pb = Planner(exp);
                         pb.plot_level = 1;
                         already_ran = exist(strcat(pb.output_folder, '/final_state.mat'), 'file'); 
-                        if already_ran && no_rerun
+                        if (already_ran && no_rerun) || dry_run
                             continue; 
                         end
                         pb.blend_plans(); 

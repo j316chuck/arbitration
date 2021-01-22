@@ -14,9 +14,9 @@ function output_analysis()
     params = get_hyperparam_sets("time_vary_alpha_open"); %"default" %"replan_zls"
 
     %% Get metrics
-%      [metrics, exp_names] = get_metrics(output_folder, ... 
-%          starts, goals, control_schemes, blend_schemes, params, verbose);
-%     save(output_mat_path, 'metrics', 'exp_names'); 
+     [metrics, exp_names] = get_metrics(output_folder, ... 
+         starts, goals, control_schemes, blend_schemes, params, verbose);
+    save(output_mat_path, 'metrics', 'exp_names'); 
     
     %% Write table
     load(output_mat_path, 'metrics'); 

@@ -5,7 +5,7 @@ function plot_trajectories(index)
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
     blend_schemes = {'time_vary_alpha_open_loop_safety_control'}; %{'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};
-    labels = get_all_alpha_blend_function_names(); %{'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; 
+    labels = ["x_1-2", "x_1-3"]; %get_all_alpha_blend_function_names(); %{'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; 
     colors = get_all_blend_scheme_colors();
     hyperparam_str = "time_vary_alpha_open"; 
     hyperparam_sets = get_hyperparam_sets(hyperparam_str); 
@@ -14,7 +14,7 @@ function plot_trajectories(index)
     Nb = length(blend_schemes); 
     start = starts{index};  
     goal = goals{index};
-    title_str = "key_blending_schemes_switch_control"; 
+    title_str = "new_alpha_blending_schemes_switch_control"; 
 
     %% Extract Data Paths
     repo = what("arbitration"); 
