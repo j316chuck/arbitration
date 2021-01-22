@@ -1,4 +1,4 @@
-function runner(start_pos)
+function runner(start_pos, end_pos)
     %% Set up experiment parameters
     no_rerun = true; 
     run_planners = false; 
@@ -22,7 +22,7 @@ function runner(start_pos)
     elapsed_time = [];
     exp_name = ""; 
     termination_state = -1;
-    for i = start_pos:length(starts)
+    for i = start_pos:end_pos
         for h = 1:length(hyperparam_sets) 
             for k = 1:length(control_schemes)
                 for j = 1:length(blend_schemes)
