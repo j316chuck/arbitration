@@ -51,7 +51,7 @@ function [params] = default_hyperparams()
     params.temperature = 0.2;
     params.num_alpha_samples = 10; 
     params.spline_obs_weight = 1;  
-    params.blend_function_name = "x"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3"
+    params.blend_function_name = "x_2-5"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3", "x_2-5"
     params.blend_function = get_alpha_blend_function(params.blend_function_name);
     params.num_mpc_safety_look_ahead = 15; 
     % ============ Get Hyperparam String ============== %
