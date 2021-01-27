@@ -1,12 +1,13 @@
 function runner(start_pos, end_pos)
     %% Set up experiment parameters
     no_rerun = true; 
+    dry_run = false; 
     run_planners = false; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};  
+    blend_schemes = {'replan_safe_traj', 'none', 'sample_safety_control'}; %time_vary_alpha_open_loop_safety_control   
     control_schemes = {'switch'};   
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
-    hyperparam_set_type = "default"; %"time_vary_alpha_open"; %"default"; %"replan_zls";  
+    hyperparam_set_type = "default"; %"default"; %"replan_zls";  
     hyperparam_sets = get_hyperparam_sets(hyperparam_set_type); 
     N = length(starts); 
     
@@ -48,7 +49,7 @@ function runner(start_pos, end_pos)
                         pb = Planner(exp);
                         pb.plot_level = 1;
                         already_ran = exist(strcat(pb.output_folder, '/final_state.mat'), 'file'); 
-                        if already_ran && no_rerun
+                        if (already_ran && no_rerun) || dry_run
                             continue; 
                         end
                         pb.blend_plans(); 

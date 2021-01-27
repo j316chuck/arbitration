@@ -18,7 +18,8 @@ end
 
 %% Grid search time vary alpha open blend function
 function params = get_hyperparams_time_vary_alpha_open()
-    blend_function_names = get_all_alpha_blend_function_names(); 
+    %blend_function_names = get_all_alpha_blend_function_names(); 
+    blend_function_names = get_new_alpha_blend_function_names(); 
     Ne = length(blend_function_names); 
     params = cell(Ne, 1);
     for i = 1:length(blend_function_names)

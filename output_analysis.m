@@ -3,34 +3,37 @@ function output_analysis()
     verbose = true;
     repo = what("arbitration"); 
     output_folder = strcat(repo.path, '/outputs/');
-    results_folder = strcat(output_folder, '/results');
+    results_folder = strcat(output_folder, '/results/');
     output_mat_path = sprintf("%s/%s", results_folder, 'output_analysis.mat');
     if ~exist(results_folder, 'dir')
         mkdir(results_folder); 
     end
     control_schemes = {'switch'};
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control'};
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'replan_safe_traj', 'none', 'sample_safety_control'};
     [starts, goals] = get_point_nav_tasks("sampled"); %"sampled" %"smoke_test"
-    params = get_hyperparam_sets("time_vary_alpha_open"); %"default" %"replan_zls"
+    params = get_hyperparam_sets("default"); %"time_vary_open" %"default" %"replan_zls"
 
     %% Get metrics
-%      [metrics, exp_names] = get_metrics(output_folder, ... 
-%          starts, goals, control_schemes, blend_schemes, params, verbose);
-%     save(output_mat_path, 'metrics', 'exp_names'); 
+     [metrics, exp_names] = get_metrics(output_folder, ... 
+         starts, goals, control_schemes, blend_schemes, params, verbose);
+    save(output_mat_path, 'metrics', 'exp_names'); 
     
     %% Write table
     load(output_mat_path, 'metrics'); 
     ar_output_csv_path = sprintf("%s/%s", results_folder, 'all_reached_goal_output_analysis.csv'); 
     rg_output_csv_path = sprintf("%s/%s", results_folder, 'reached_goal_output_analysis.csv'); 
     output_csv_path = sprintf("%s/%s", results_folder, 'output_analysis.csv'); 
-    write_metrics_table(metrics, control_schemes, blend_schemes, params, ar_output_csv_path, true, true, verbose); 
-    write_metrics_table(metrics, control_schemes, blend_schemes, params, rg_output_csv_path, false, true, verbose); 
-    write_metrics_table(metrics, control_schemes, blend_schemes, params, output_csv_path, false, false, verbose); 
+    write_metrics_table(metrics, control_schemes, blend_schemes, params, ...
+        ar_output_csv_path, true, true, verbose); 
+    write_metrics_table(metrics, control_schemes, blend_schemes, params, ...
+        rg_output_csv_path, false, true, verbose); 
+    write_metrics_table(metrics, control_schemes, blend_schemes, params, ...
+        output_csv_path, false, false, verbose); 
 end
 
 function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...
         control_schemes, blend_schemes, params, verbose)   
-    Ns = 50; % start and goal pairs
+    Ns = 100; % start and goal pairs
     Nc = length(control_schemes); % control scheme
     Nb = length(blend_schemes); % blend scheme
     Nh = length(params); % hyperparameters
@@ -106,7 +109,8 @@ function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...
     end
 end 
 
-function write_metrics_table(metrics, control_schemes, blend_schemes, params, csv_path, use_same, use_reached_goal, verbose)
+function write_metrics_table(metrics, control_schemes, blend_schemes, ...
+    params, csv_path, use_same, use_reached_goal, verbose)
     %% Initialize metric cell columns
     Ns = size(metrics, 1); 
     Nc = length(control_schemes); 
@@ -154,18 +158,18 @@ function write_metrics_table(metrics, control_schemes, blend_schemes, params, cs
         'Std Num Safety Ctrls', ...
      };
     
-    %% Get all valid indices where all blending schemes succeeded for fair comparison
-    valid_ind = ones(Ns, Nc, Nh); 
-    if use_same
+    %% Get all valid indices for fair comparison of blending and/or hyperparameter schemes
+    valid_ind = ones(Ns, 1); 
+    if use_same 
         for j = 1:Nc
             for h = 1:Nh
                 for k = 1:Nb
                      terminate_success = (metrics(:, j, k, h, 7) == 0); 
-                     valid_ind(:, j, h) = valid_ind(:, j, h) .* terminate_success; 
+                     valid_ind = valid_ind(:) .* terminate_success; 
                 end
             end
-        end         
-    end 
+        end 
+    end
     
     %% Aggregate and log experiment run statistics
     index = 0; 
@@ -177,29 +181,30 @@ function write_metrics_table(metrics, control_schemes, blend_schemes, params, cs
                 bs = blend_schemes{k}; 
                 cs = control_schemes{j}; 
                 alg_name = sprintf("blend_%s_control_%s_%s", bs, cs, hs);
-                valid = valid_ind(:, j, h); 
                 if use_reached_goal
-                    valid = valid .* (metrics(:, j, k, h, 7) == 0); 
+                    cur_valid = valid_ind(:) .* (metrics(:, j, k, h, 7) == 0); 
+                else
+                    cur_valid = valid_ind(:);
                 end 
-                alj = mean(metrics(:, j, k, h, 1) .* valid);
-                slj = std(metrics(:, j, k, h, 1) .* valid); 
-                aaj = mean(metrics(:, j, k, h, 2) .* valid);
-                saj = std(metrics(:, j, k, h, 2) .* valid); 
-                assh = mean(metrics(:, j, k, h, 3) .* valid);
-                sssh = std(metrics(:, j, k, h, 3) .* valid); 
-                adot = mean(metrics(:, j, k, h, 4) .* valid);
-                sdot = std(metrics(:, j, k, h, 4) .* valid); 
-                ati = mean(metrics(:, j, k, h, 5) .* valid);
-                sti = std(metrics(:, j, k, h, 5) .* valid); 
-                ansc = mean(metrics(:, j, k, h, 6) .* valid);
-                snsc = std(metrics(:, j, k, h, 6) .* valid); 
+                alj = mean(metrics(:, j, k, h, 1) .* cur_valid);
+                slj = std(metrics(:, j, k, h, 1) .* cur_valid); 
+                aaj = mean(metrics(:, j, k, h, 2) .* cur_valid);
+                saj = std(metrics(:, j, k, h, 2) .* cur_valid); 
+                assh = mean(metrics(:, j, k, h, 3) .* cur_valid);
+                sssh = std(metrics(:, j, k, h, 3) .* cur_valid); 
+                adot = mean(metrics(:, j, k, h, 4) .* cur_valid);
+                sdot = std(metrics(:, j, k, h, 4) .* cur_valid); 
+                ati = mean(metrics(:, j, k, h, 5) .* cur_valid);
+                sti = std(metrics(:, j, k, h, 5) .* cur_valid); 
+                ansc = mean(metrics(:, j, k, h, 6) .* cur_valid);
+                snsc = std(metrics(:, j, k, h, 6) .* cur_valid); 
                 termination = metrics(:, j, k, h, 7);
                 num_reached_goal = sum(termination == 0); 
                 num_crashed = sum(termination == 1); 
                 num_tle = sum(termination == 2); 
                 num_error = sum(termination == -1); 
                 total_exp = num_reached_goal + num_crashed + num_tle + num_error;
-                num_exp = sum(valid); 
+                num_exp = sum(cur_valid); 
                
                 alg_names{index} = alg_name; 
                 success{index}  = num_reached_goal; 
