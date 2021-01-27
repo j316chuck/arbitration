@@ -39,8 +39,6 @@ classdef Planner < handle
     
     methods
         function obj = Planner(exp)
-            % Planner Construct an instance of this class
-            %   Detailed explanation goes here
             obj.exp = exp; 
             obj.start = exp.start;
             obj.goal = exp.goal;
@@ -54,7 +52,8 @@ classdef Planner < handle
             obj.control_scheme = exp.blending.control_scheme; 
             obj.dt = exp.dt; 
             obj.num_mpc_steps = ceil(obj.blending.replan_dt / obj.dt); % num steps we take in a mpc 
-            obj.replan_time_counter = obj.blending.replan_dt; %start of with a replan
+             % goes from [0-obj.blending.replan_dt], start of with a replan
+            obj.replan_time_counter = obj.blending.replan_dt;
             obj.num_waypts = exp.num_waypts;
             obj.horizon = exp.horizon;
             obj.reach_avoid_planner = exp.reach_avoid_planner;
@@ -62,19 +61,16 @@ classdef Planner < handle
             obj.spline_planner = exp.spline_planner;
             obj.dynSys = obj.spline_planner.dynSys;
             % stores the state (x), control (u), blending prob (alpha)
+            % 6 x N matrix where N is control trajectory
+            obj.blend_traj = []; % alpha = blending_scheme
             obj.orig_traj = []; % alpha = 1
             obj.safety_traj = [];  % alpha = 0
-            obj.blend_traj = []; % alpha = blending_scheme
             obj.switch_traj = []; % alpha = 0 if V(x) < 0 
             obj.termination_state = -1; 
             
             % Logging information
             repo = what('arbitration');
-            start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
-            goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 
-            point_nav_str = sprintf("%s_map_%s_%s", exp.map_basename, start_str, goal_str); 
-            obj.exp_name = sprintf("%s_blend_%s_control_%s_%s", point_nav_str, ...
-                obj.blend_scheme, obj.control_scheme, exp.hyperparam_str); 
+            obj.exp_name = exp.exp_name; 
             obj.output_folder = strcat(repo.path, "/outputs/", obj.exp_name);
             obj.plot_level = obj.exp.plot_level;
             if exp.clear_dir && exist(obj.output_folder, 'dir')
@@ -93,14 +89,13 @@ classdef Planner < handle
                 load(filename, 'brs_planner'); 
                 obj.brs_planner = brs_planner;
             end 
-            
             if exp.run_planner
                 obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt);
                 reach_avoid_planner = obj.reach_avoid_planner;
-                filename = sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, point_nav_str); 
+                filename = sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, exp.point_nav_str); 
                 save(filename, 'reach_avoid_planner'); 
             else
-                filename =  sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, point_nav_str); 
+                filename =  sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, exp.point_nav_str); 
                 load(filename, 'reach_avoid_planner');
                 obj.reach_avoid_planner = reach_avoid_planner;
             end 
@@ -162,8 +157,12 @@ classdef Planner < handle
             obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
             nx = obj.dynSys.updateState(u, obj.dt, x'); % update state
             obj.state = [nx', u]; % new state and old control
+            % Update occupancy map, cost function, and the avoid set.
+            map.updateMapAndCost(senseData, params.senseShape);
+            
             obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
             obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
+            
         end 
         
         %% Replan original plans

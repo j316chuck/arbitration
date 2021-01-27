@@ -4,7 +4,6 @@ function test_blender()
     params.run_planner = true; 
     params.run_brs = false;
     exp = load_exp(params);
-    
     pb = Planner(exp);
     pb.plot_level = 2; 
     pb.blend_plans(); 
