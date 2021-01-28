@@ -1,4 +1,4 @@
-function plot_trajectories(index)
+function plot_exp_trajectories(index)
     %% Change these parameters
     output_name = "/results/1_25_all_map"; 
     nav_task_type = "sampled"; %"smoke";  

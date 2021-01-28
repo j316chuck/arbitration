@@ -35,6 +35,12 @@ classdef Planner < handle
         scores
         termination_state
         use_safety_control
+        unknown_occ_map
+        is_unknown_environment
+        sensor_shape
+        sensor_rad 
+        senseFOV 
+        farPlane
     end
     
     methods
@@ -99,6 +105,20 @@ classdef Planner < handle
                 load(filename, 'reach_avoid_planner');
                 obj.reach_avoid_planner = reach_avoid_planner;
             end 
+            if strcmp(exp.environment_type, 'unknown')
+                obj.sensor_shape = 'camera'; 
+                obj.sensor_rad = 1.5;
+                obj.senseFOV = pi/6; 
+                obj.farPlane = 20; 
+                obj.is_unknown_environment = true;
+                initial_sense_data = {exp.start(1:3)', [obj.sensor_rad, obj.sensor_rad]};
+                obj.unknown_occ_map = exp.unknown_occ_map; 
+                obj.unknown_occ_map.updateMapAndCost(initial_sense_data, obj.sensor_shape);
+                spline_obs_map = obj.unknown_occ_map.planner_obs_map; 
+                obj.spline_planner.set_sd_obs(spline_obs_map); 
+            else
+                obj.is_unknown_environment = false; 
+            end
         end
         
         %% Entry point
@@ -157,12 +177,13 @@ classdef Planner < handle
             obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
             nx = obj.dynSys.updateState(u, obj.dt, x'); % update state
             obj.state = [nx', u]; % new state and old control
-            % Update occupancy map, cost function, and the avoid set.
-            map.updateMapAndCost(senseData, params.senseShape);
-            
             obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
             obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
-            
+            % Update occupancy map, cost function, and the avoid set.
+            if obj.is_unknown_environment
+                senseData = {nx', [obj.senseFOV; obj.sensor_rad]};
+                obj.unknown_occ_map.updateMapAndCost(senseData, obj.sensor_shape);     
+            end 
         end 
         
         %% Replan original plans
@@ -560,7 +581,7 @@ classdef Planner < handle
             figure(6);
             hold on;
             contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0]);
-            obj.plot_traj(traj(1, :), traj(2, :), traj(3, :), 'red', 'spline');
+            plot_traj(traj(1, :), traj(2, :), traj(3, :), 'red', 'spline');
             scatter(v1(1), v1(2), 30, 'bo'); 
             scatter(v2(1), v2(2), 30, 'bo');
         end 
@@ -617,21 +638,21 @@ classdef Planner < handle
                 mpc_spline_xs = obj.orig_traj(1, :); 
                 mpc_spline_ys = obj.orig_traj(2, :); 
                 mpc_spline_ths = obj.orig_traj(3, :); 
-                obj.plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'orig traj');   
+                plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'orig traj');   
             end 
             % plot switch mpc traj
             if ~isempty(obj.switch_traj)
                 switch_xs = obj.switch_traj(1, :); 
                 switch_ys = obj.switch_traj(2, :); 
                 switch_ths = obj.switch_traj(3, :); 
-                obj.plot_traj(switch_xs, switch_ys, switch_ths, 'blue', 'switch traj');   
+                plot_traj(switch_xs, switch_ys, switch_ths, 'blue', 'switch traj');   
             end 
             % plot safety_traj
             if ~isempty(obj.safety_traj)
                 safety_spline_xs = obj.safety_traj(1, :); 
                 safety_spline_ys = obj.safety_traj(2, :); 
                 safety_spline_ths = obj.safety_traj(3, :); 
-                obj.plot_traj(safety_spline_xs, safety_spline_ys, safety_spline_ths, 'magenta', 'safety traj');    
+                plot_traj(safety_spline_xs, safety_spline_ys, safety_spline_ths, 'magenta', 'safety traj');    
             end
             % plot blending traj
             if ~isempty(obj.blend_traj)
@@ -640,13 +661,13 @@ classdef Planner < handle
                 blend_ths = obj.blend_traj(3, :); 
                 use_avoid_probs = obj.blend_traj(6, :);
                 blend_name = obj.blend_scheme;
-                obj.plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
+                plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
             end 
             % plot reach avoid traj
             reach_avoid_xs = obj.reach_avoid_planner.opt_traj(1, :);
             reach_avoid_ys = obj.reach_avoid_planner.opt_traj(2, :);
             reach_avoid_ths = obj.reach_avoid_planner.opt_traj(3, :);
-            obj.plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
+            plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
             % figure parameters
             view(0, 90)
             set(gcf, 'color', 'white')
@@ -693,53 +714,6 @@ classdef Planner < handle
                 savefigpath = sprintf("%s/spline_cost_timestamp_%d", obj.output_folder, obj.cur_timestamp);  
             end 
             obj.spline_planner.plot_spline_costs(savefigpath);
-        end 
-        
-        
-        function plot_traj(obj, xs, ys, ths, color, name)
-            s = scatter(xs, ys, 15, 'black', 'filled', 'DisplayName', name);
-            s.HandleVisibility = 'off';
-            q = quiver(xs, ys, cos(ths), sin(ths), 'Color', color);
-            q.DisplayName = name;
-            q.HandleVisibility = 'on';
-            q.ShowArrowHead = 'on';
-            q.AutoScale = 'on';
-            q.AutoScaleFactor = 0.1;
-        end
-
-        function plot_traj_probs(obj, xs, ys, ths, probs, name)
-            s = scatter(xs, ys, 15, 'black', 'filled');
-            s.HandleVisibility = 'off';
-            q = quiver(xs, ys, cos(ths), sin(ths));
-            obj.set_quiver_colors(q, probs); 
-            q.HandleVisibility = 'on';
-            q.ShowArrowHead = 'on';
-            q.AutoScale = 'on';
-            q.DisplayName = name;
-            q.AutoScaleFactor = 0.1;
-        end
-        
-        function set_quiver_colors(obj, q, probs)
-            %// Get the current colormap
-            currentColormap = colormap(gca);
-
-            %// Now determine the color to make each arrow using a colormap
-            [~, ~, ind] = histcounts(probs, size(currentColormap, 1));
-
-            %// Now map this to a colormap to get RGB
-            cmap = uint8(ind2rgb(ind(:), currentColormap) * 255);
-            cmap(:,:,4) = 255;
-            cmap = permute(repmat(cmap, [1 3 1]), [2 1 3]);
-
-            %// We repeat each color 3 times (using 1:3 below) because each arrow has 3 vertices
-            set(q.Head, ...
-                'ColorBinding', 'interpolated', ...
-                'ColorData', reshape(cmap(1:3,:,:), [], 4).');   %'
-
-            %// We repeat each color 2 times (using 1:2 below) because each tail has 2 vertices
-            set(q.Tail, ...
-                'ColorBinding', 'interpolated', ...
-                'ColorData', reshape(cmap(1:2,:,:), [], 4).');
         end 
     end
 end

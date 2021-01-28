@@ -45,7 +45,7 @@ function [params] = default_hyperparams()
     %params.control_scheme = 'distance';  
     
     %% Environment Scheme
-    params.environment_type = 'unknown_env'; % 'known_env' 
+    params.environment_type = 'unknown'; % 'known' 
 
     %% Blending Scheme
     params.replan_dt = 1.0;

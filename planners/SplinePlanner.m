@@ -25,18 +25,19 @@ classdef SplinePlanner < handle
         traj_xs
         traj_ys 
         replan_scores %x, y, safety_cost, replan_cost, reward
-        binary_occ_map
+        binary_occ_map % known obstacle map of the world
         x2d
         y2d
         x3d 
         y3d
         t3d 
         all_costs
+        spline_obs_weight
     end
     
     methods
         %% Constructs Spline Planner.
-        function obj = SplinePlanner(num_waypts, horizon, grid_2d, dynSys, binary_occ_map)
+        function obj = SplinePlanner(num_waypts, horizon, grid_2d, dynSys, binary_occ_map, spline_obs_weight)
             obj.num_waypts = num_waypts;
             obj.horizon = horizon;
             obj.dt = horizon / (num_waypts - 1);
@@ -57,6 +58,7 @@ classdef SplinePlanner < handle
             [x3d, y3d, t3d] = meshgrid(grid_2d.vs{1}, grid_2d.vs{2}, obj.t3d); 
             obj.disc_3d = [x3d(:), y3d(:), t3d(:)];
             obj.binary_occ_map = binary_occ_map; 
+            obj.spline_obs_weight = spline_obs_weight; 
         end
         
         %% Sets the signed distance to goal.
@@ -64,9 +66,10 @@ classdef SplinePlanner < handle
             obj.goal = goal; 
             obj.sd_goal = sd_goal;
         end
+        
         %% Sets the signed distance to obstacle.
-        function obj = set_sd_obs(obj, sd_obs, weight)
-            obj.sd_obs = sd_obs * weight;
+        function obj = set_sd_obs(obj, sd_obs)
+            obj.sd_obs = sd_obs * obj.spline_obs_weight; 
         end
         
         %% Sets the num of spline planning points

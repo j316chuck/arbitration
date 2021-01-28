@@ -58,9 +58,10 @@ function [exp] = load_exp(params)
     dMax = exp.dMax; 
     splineDynSys = Plane(xstart, wMax, vRange, dMax);
     exp.splineDynSys = splineDynSys;
-    exp.spline_planner = SplinePlanner(exp.num_waypts, exp.horizon, exp.grid_2d, exp.splineDynSys, exp.binary_occ_map);  
+    exp.spline_planner = SplinePlanner(exp.num_waypts, exp.horizon, exp.grid_2d, exp.splineDynSys, ... 
+                                      exp.binary_occ_map, params.spline_obs_weight);  
     exp.spline_planner.set_sd_goal(exp.goal, exp.goal_map_2d);
-    exp.spline_planner.set_sd_obs(exp.masked_obs_map, params.spline_obs_weight); 
+    exp.spline_planner.set_sd_obs(exp.masked_obs_map); 
     
     %% Blending Scheme
     exp.blending.blend_scheme = params.blend_scheme;
@@ -84,6 +85,6 @@ function [exp] = load_exp(params)
     exp.run_planner = params.run_planner;     
     exp.run_brs = params.run_brs; 
     exp.save_plot = params.save_plot; 
-    exp.plot_level = params.plot_level; 
+    exp.plot_level = params.plot_level;    
 end 
 
