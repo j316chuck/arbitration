@@ -15,7 +15,7 @@ function [occupancy_grid, sensed_region] = generate_camera_sensing_region(robot_
 % Outputs:
 %   u              - Signed distance over the grid.
 
-if nargin < 6
+if nargin < 5
   far_plane = inf;
 end
 vehicle_pos = robot_pos(1:2); 

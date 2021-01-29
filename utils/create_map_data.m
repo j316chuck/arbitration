@@ -56,9 +56,9 @@ function exp = create_map_data(params)
     exp.obstacle = repmat(exp.obs_map, 1, 1, exp.grid_3d.N(3));
     
     %% Create occupancy map data structure
-    exp.sensorArgs.sensor_shape = 'camera'; 
+    exp.sensorArgs.sensor_shape = 'lidar'; %'camera'; 
     exp.sensorArgs.sensor_radius = 2;
     exp.sensorArgs.sensor_fov = pi/6; 
-    exp.sensorArgs.far_plane = 20; 
+    exp.sensorArgs.far_plane = 2; %20; 
     exp.unknown_occ_map = OccuMap(grid_3d, grid_2d, occ_map, exp.sensorArgs); 
 end 

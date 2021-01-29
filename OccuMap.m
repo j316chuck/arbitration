@@ -72,14 +72,14 @@ classdef OccuMap < handle
         function updateMapAndCost(obj, robot_pos)
             % Construct cost function for region outside sensing radius
             % or 'known' environment. +1 sensed, -1 unsensed 
-            if strcmp(obj.sensor_shape, 'circle') || obj.first_compute
+            if strcmp(obj.sensor_shape, 'circle') %|| obj.first_compute
                 sensing_shape = -shapeCylinder(obj.grid, 3, robot_pos(1:2), obj.sensor_radius);
                 [~, data_sensed] = proj(obj.grid, sensing_shape, [0 0 1], 0);
             elseif strcmp(obj.sensor_shape, 'camera') 
                 [data_sensed, ~] = generate_camera_sensing_region(robot_pos, ...
                 obj.grid_2d, obj.binary_occ_map, obj.sensor_fov, obj.far_plane);
             elseif strcmp(obj.sensor_shape, 'lidar')
-                [~, data_sensed] = generate_lidar_sensing_region(robot_pos(1:2), ...
+                [data_sensed, ~] = generate_lidar_sensing_region(robot_pos(1:2), ...
                         obj.grid_2d, obj.binary_occ_map, obj.sensor_radius); 
             else
                error('Unrecognized sensor type');

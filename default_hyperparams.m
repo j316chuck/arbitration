@@ -24,7 +24,7 @@ function [params] = default_hyperparams()
     %params.start = [1.5; 1.5; pi/2; 0.01]; %[2; 1; pi/2; 0.01]; %[4; 0; pi/2; 0.01]; %[-9;-9;0;0.01]; 
     %params.goal = [-4; 0; pi/2; 0.01]; %[4; 3; pi/2; 0.01]; 
     [s, g] = get_all_smoke_test_cases(); 
-    params.start = s{1}; 
+    params.start = [-1.376; -3.224; pi/2; 0.01]; %[-0.375; -1.915; pi/2; 0.01];  %s{1}; 
     params.goal = g{1}; 
     
     %% Blend Scheme
