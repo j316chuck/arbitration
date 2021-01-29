@@ -7,6 +7,7 @@ classdef BRSAvoidPlanner < handle
         schemeData
         dynSys
         tau
+        updateMethod % HJIPDE, warm, localQ
         obstacle_map % negative inside obstacle, positive outside
         data
         data_tau
@@ -14,11 +15,13 @@ classdef BRSAvoidPlanner < handle
         derivValueFun
         dt 
         extraArgs
+        firstCompute
+        totalComputeTime
     end
     
     methods
         %% Constructs BRS Avoid Planner.
-        function obj = BRSAvoidPlanner(grid_3d, schemeData, tau, dt)
+        function obj = BRSAvoidPlanner(grid_3d, schemeData, tau, dt, updateMethod)
             if ~isequal(schemeData.uMode, 'max')
                 error("OptCtrl need to maximize distance to obstacle");
             end
@@ -30,12 +33,39 @@ classdef BRSAvoidPlanner < handle
             obj.dynSys = schemeData.dynSys;
             obj.tau = tau;
             obj.dt = dt; 
+            obj.updateMethod = updateMethod; 
             % Extra Args
             obj.extraArgs.visualize = true;
             obj.extraArgs.plotData.plotDims = [1 1 0];
             obj.extraArgs.plotData.projpt = 0;
             obj.extraArgs.stopConvergeTTR = false;
+            obj.firstCompute = false; 
         end
+
+        function compute_brs(obj, obstacle_map)
+            tic 
+            obj.obstacle_map = obstacle_map; 
+            if obj.firstCompute || strcmp(obj.updateMethod, 'HJIPDE')
+                obj.firstCompute = false;
+                [obj.data, obj.data_tau, ~] = ...
+                    HJIPDE_solve(obj.obstacle_map, obj.tau, obj.schemeData, 'minVOverTime', obj.extraArgs); 
+            elseif strcmp(obj.updateMethod, 'warm')
+                [obj.data, obj.data_tau, ~] = ...
+                HJIPDE_solve_warm(data0, lxOld, obj.lCurr, ...
+                    obj.timeDisc, obj.schemeData, minWith, ...
+                    obj.warmStart, obj.HJIextraArgs);
+            elseif strcmp(obj.updateMethod, 'localQ')     
+                [obj.data, obj.data_tau, ~] = ...
+                  HJIPDE_solve_localQ(data0, lxOld, obj.lCurr, ...
+                    obj.updateEpsilon, obj.timeDisc, obj.schemeData, ...
+                    minWith, obj.HJIextraArgs);
+            else 
+                warning("update method not supported"); 
+            end 
+            obj.totalComputeTime = toc;
+            obj.valueFun = obj.data(:, :, :, end);
+            obj.derivValueFun = computeGradients(obj.grid, obj.valueFun);
+        end 
         
         %% Solves the brs avoid problem
         function solve_brs_avoid(obj, obstacle_map)
@@ -45,7 +75,7 @@ classdef BRSAvoidPlanner < handle
             obj.obstacle_map = obstacle_map;
             % Solve 
             [obj.data, obj.data_tau, ~] = ...
-                HJIPDE_solve(obj.obstacle_map, obj.tau, obj.schemeData, 'minVOverTime', obj.extraArgs);          
+                HJIPDE_solve(obj.obstacle_map, obj.tau, obj.schemeData, 'minVOverTime', obj.extraArgs);   
             obj.valueFun = obj.data(:, :, :, end);
             obj.derivValueFun = computeGradients(obj.grid, obj.valueFun);
         end 

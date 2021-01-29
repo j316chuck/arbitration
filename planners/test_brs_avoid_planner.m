@@ -23,8 +23,9 @@ schemeData.dynSys = pl;
 schemeData.grid = g;
 schemeData.uMode = 'max';
 schemeData.dMode = 'min';
+updateMethod = 'HJIPDE'; 
 
-planner = BRSAvoidPlanner(g, schemeData, tau);
+planner = BRSAvoidPlanner(g, schemeData, tau, updateMethod);
             
 %% Plan!
 % note: need a non-zero starting velocity to avoid singularities in spline
