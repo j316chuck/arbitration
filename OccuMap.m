@@ -104,16 +104,16 @@ classdef OccuMap < handle
             obj.safety_fmm = compute_fmm_map(obj.grid_2d, obj.occupancy_map_safety);
             obj.planner_fmm = compute_fmm_map(obj.grid_2d, obj.occupancy_map_planner); 
             obj.signed_dist_safety = repmat(obj.safety_fmm, 1, 1, obj.grid.N(3));
-            obj.signed_dist_planner = -obj.planner_fmm .* obj.masked_occ_map;
+            obj.signed_dist_planner = -obj.planner_fmm .* (obj.occupancy_map_planner < 0);
             obj.plot_occ_map(); 
         end
         
         function plot_occ_map(obj)
             figure(2); 
-            set(gcf,'Position', [10 10 600 1000])
+            set(gcf,'Position', [10 10 1200 1000])
             clf
             % Plot safety occupancy map
-            subplot(2, 1, 1); 
+            subplot(2, 2, 1); 
             hold on;
             contourf(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.occupancy_map_safety, [0 0], 'DisplayName', 'safety', 'color', 'blue');
             plot_traj(obj.trajectory(1, :), obj.trajectory(2, :), obj.trajectory(3, :), 'red', 'trajectory');
@@ -123,8 +123,19 @@ classdef OccuMap < handle
             legend('Location', 'NorthWest', 'Interpreter', 'None');
             colorbar; 
             title("Occ Map Safety");
+            % Plot safety signed dist map
+            subplot(2, 2, 2); 
+            hold on;
+            contourf(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.safety_fmm, 'DisplayName', 'safety');
+            plot_traj(obj.trajectory(1, :), obj.trajectory(2, :), obj.trajectory(3, :), 'red', 'trajectory');
+            contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0], 'DisplayName', 'binary_obs_map', 'color', 'black');
+            xlabel("x(m)"); 
+            ylabel("y(m)"); 
+            legend('Location', 'NorthWest', 'Interpreter', 'None');
+            colorbar; 
+            title("Signed Dist Safety");
             % Plot planner occupancy map
-            subplot(2, 1, 2); 
+            subplot(2, 2, 3); 
             hold on;
             contourf(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.occupancy_map_planner, [0 0], 'DisplayName', 'planner', 'color', 'blue');
             plot_traj(obj.trajectory(1, :), obj.trajectory(2, :), obj.trajectory(3, :), 'red', 'trajectory');
@@ -134,6 +145,17 @@ classdef OccuMap < handle
             legend('Location', 'NorthWest', 'Interpreter', 'None');
             colorbar; 
             title("Occ Map Planner"); 
+            % Plot safety signed dist map
+            subplot(2, 2, 4); 
+            hold on;
+            contourf(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.signed_dist_planner, 'DisplayName', 'planner');
+            plot_traj(obj.trajectory(1, :), obj.trajectory(2, :), obj.trajectory(3, :), 'red', 'trajectory');
+            contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0], 'DisplayName', 'binary_obs_map', 'color', 'black');
+            xlabel("x(m)"); 
+            ylabel("y(m)"); 
+            legend('Location', 'NorthWest', 'Interpreter', 'None');
+            colorbar; 
+            title("Signed Dist Planner");
         end
     end    
 end
