@@ -1,20 +1,21 @@
 function plot_trajectories(index)
     %% Change these parameters
-    output_name = "/outputs"; 
+    output_name = "/results/1_25_all_map"; 
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control'}; %{'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};
-    labels = get_all_alpha_blend_function_names(); %{'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; 
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};
+    labels = {'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; %get_new_alpha_blend_function_names(); 
     colors = get_all_blend_scheme_colors();
-    hyperparam_str = "time_vary_alpha_open"; 
-    hyperparam_sets = get_hyperparam_sets(hyperparam_str); 
+    hyperparam_str = "default"; 
+    hyperparam_sets = get_hyperparam_sets(hyperparam_str); %replan_zls %time_vary_alpha_open"
     Nh = length(hyperparam_sets); 
     Nc = length(control_schemes); 
     Nb = length(blend_schemes); 
     start = starts{index};  
     goal = goals{index};
-    title_str = "key_blending_schemes_switch_control"; 
+    title_str = "key_alpha_blending_schemes_switch_control"; 
+    plot_hyperparam = false; 
 
     %% Extract Data Paths
     repo = what("arbitration"); 
@@ -38,7 +39,13 @@ function plot_trajectories(index)
                 params.goal = goal;
                 bs = blend_schemes{k}; 
                 cs = control_schemes{j}; 
-                color = colors(h, :); 
+                if plot_hyperparam
+                    color = colors(h, :);
+                    legend_name = labels{h};
+                else
+                    color = colors(k, :);
+                    legend_name = labels{k};
+                end 
                 params.blend_scheme = blend_schemes{k}; 
                 params.control_scheme = control_schemes{j}; 
                 params.hyperparam_str = get_hyperparam_string(params); 
@@ -47,7 +54,6 @@ function plot_trajectories(index)
                 exp = load_exp(params); 
                 pb = Planner(exp);
                 alg_name = sprintf("blend_%s_control_%s", bs, cs); 
-                legend_name = labels{h}; %labels{k}; 
                 exp_name = pb.exp_name; 
                 exp_ran = false; 
                 zls_theta = calc_zls_theta(start, goal); 

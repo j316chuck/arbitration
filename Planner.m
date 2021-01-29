@@ -139,24 +139,21 @@ classdef Planner < handle
             u1 = [obj.blend_traj(4, obj.cur_timestamp), obj.blend_traj(5, obj.cur_timestamp)];
             u2 = obj.brs_planner.get_avoid_u(x)';
             if strcmp(obj.control_scheme, 'follow') 
+                u = u1; 
                 alpha = obj.blend_traj(6, obj.cur_timestamp); 
             elseif strcmp(obj.control_scheme, 'switch')
                if obj.use_safety_control || obj.is_unsafe_state(v)
                    obj.use_safety_control = true; 
                    alpha = 0; 
+                   u = u2; 
                else 
-                   alpha = 1;
+                   alpha = obj.blend_traj(6, obj.cur_timestamp); 
+                   u = u1; 
                end 
-            elseif strcmp(obj.control_scheme, 'constant') 
-               alpha = obj.blending.alpha;
-            elseif strcmp(obj.control_scheme, 'distance')
-               alpha = obj.blending.blend_function(v); 
             else
                warning("control scheme not supported");  
                return
             end
-            assert(0 <= alpha && alpha <= 1);
-            u = alpha * u1 + (1 - alpha) * u2;
         end 
         
                 
@@ -164,7 +161,7 @@ classdef Planner < handle
         function update_state(obj, x, u, alpha) 
             obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
             nx = obj.dynSys.updateState(u, obj.dt, x'); % update state
-            obj.state = [nx', u]; % new state and new control
+            obj.state = [nx', u]; % new state and old control
             obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
             obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
         end 
