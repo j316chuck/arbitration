@@ -17,7 +17,7 @@ classdef SplinePlanner < handle
         gdisc
         disc_2d
         disc_3d
-        sd_obs
+        sd_obs 
         sd_goal
         start
         goal
@@ -25,7 +25,7 @@ classdef SplinePlanner < handle
         traj_xs
         traj_ys 
         replan_scores %x, y, safety_cost, replan_cost, reward
-        binary_occ_map % known obstacle map of the world
+        binary_occ_map % known obstacle map of the world, +1 free, -1 obstacle
         x2d
         y2d
         x3d 

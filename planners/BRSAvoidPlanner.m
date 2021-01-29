@@ -7,7 +7,7 @@ classdef BRSAvoidPlanner < handle
         schemeData
         dynSys
         tau
-        obstacle_map
+        obstacle_map % negative inside obstacle, positive outside
         data
         data_tau
         valueFun

@@ -106,16 +106,9 @@ classdef Planner < handle
                 obj.reach_avoid_planner = reach_avoid_planner;
             end 
             if strcmp(exp.environment_type, 'unknown')
-                obj.sensor_shape = 'camera'; 
-                obj.sensor_rad = 1.5;
-                obj.senseFOV = pi/6; 
-                obj.farPlane = 20; 
                 obj.is_unknown_environment = true;
-                initial_sense_data = {exp.start(1:3)', [obj.sensor_rad, obj.sensor_rad]};
                 obj.unknown_occ_map = exp.unknown_occ_map; 
-                obj.unknown_occ_map.updateMapAndCost(initial_sense_data, obj.sensor_shape);
-                spline_obs_map = obj.unknown_occ_map.planner_obs_map; 
-                obj.spline_planner.set_sd_obs(spline_obs_map); 
+                obj.unknown_occ_map.updateMapAndCost(exp.start);
             else
                 obj.is_unknown_environment = false; 
             end
@@ -179,10 +172,8 @@ classdef Planner < handle
             obj.state = [nx', u]; % new state and old control
             obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
             obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
-            % Update occupancy map, cost function, and the avoid set.
             if obj.is_unknown_environment
-                senseData = {nx', [obj.senseFOV; obj.sensor_rad]};
-                obj.unknown_occ_map.updateMapAndCost(senseData, obj.sensor_shape);     
+                obj.unknown_occ_map.updateMapAndCost(nx);     
             end 
         end 
         
@@ -321,6 +312,11 @@ classdef Planner < handle
         
         %% Plan high level mpc plan for obj.horizon time to be taken for obj.num_mpc_steps iterations
         function plan_mpc_controls(obj)
+            if obj.is_unknown_environment
+                spline_obs_map = obj.unknown_occ_map.signed_dist_planner; 
+                obj.spline_planner.set_sd_obs(spline_obs_map); 
+                % set the brs planner here too :) 
+            end 
             obj.replan_time_counter = 0;
             obj.use_safety_control = false; 
             plan = obj.spline_planner.plan(obj.state); 
