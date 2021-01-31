@@ -5,7 +5,7 @@ function u = compute_fmm_map(grid, occupancy_map)
 % Inputs:
 %   grid           - A 2D grid structure over which signed distance
 %                     needs to be computed. 
-%   occupancy_map  - A 2D occupancy map with (+1) for unoccupied 
+%   occupancy_map  - A 2D occupancy map with (+1) for free 
 %                     regions and (-1) for occupied.
 % 
 % Outputs:

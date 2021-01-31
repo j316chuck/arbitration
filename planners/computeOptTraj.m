@@ -58,7 +58,7 @@ function [traj, traj_tau] = computeOptTraj(g, data, tau, dynSys, extraArgs)
       % Update trajectory
       grad = computeGradients(g, BRS_at_t);
       deriv_at_x = eval_u(g, grad, dynSys.x);
-      u = dynSys.optCtrl(tau(tEarliest), dynSys.x, deriv_at_x, uMode);
+      u = dynSys.optCtrl(tau(tEarliest), dynSys.x, deriv_at_x, uMode, NaN);
       traj(:, traj_idx) = [dynSys.x(:); u(:)];
       traj_tau(end + 1) = t;
       % Visualize BRS corresponding to current trajectory point

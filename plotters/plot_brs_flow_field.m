@@ -46,5 +46,6 @@ for t=1:n
     contour(x, y, data2d, 'DisplayName', 'value fun', 'color', '#CC1FCB');
     legend('Location', 'NorthWest', 'Interpreter', 'None');
     savefig(strcat(repo.path, '/utils/brs_planner_avoid_u.fig')); 
+    hold off;
 end 
 

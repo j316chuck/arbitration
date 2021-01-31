@@ -18,7 +18,7 @@ function exp = create_map_data(params)
     grid_img = createGrid(gmin_img, gmax_img, gnum_img);
     exp.grid_img = grid_img;
    
-    % Define 3D grid
+    %% Define 3D grid
     gmin_3d = params.gmin_3d;  % Lower corner of computation domain
     gmax_3d = params.gmax_3d;  % Upper corner of computation domain
     gnum_3d = params.gnum_3d;  % Number of grid points per dimension
@@ -26,13 +26,14 @@ function exp = create_map_data(params)
     grid_3d = createGrid(gmin_3d, gmax_3d, gnum_3d, pdDim);
     exp.grid_3d = grid_3d; 
     
-    % create grid representing the new image size
+    %% Create 2D grid
     gmin_2d = params.gmin_3d(1:2);
     gmax_2d = params.gmax_3d(1:2);
     gnum_2d = params.gnum_3d(1:2);
     grid_2d = createGrid(gmin_2d, gmax_2d, gnum_2d);
     exp.grid_2d = grid_2d;
    
+    %% Create obstacle maps
     % create an array of points at which to interpolate old image
     pts = [grid_2d.xs{1}(:), grid_2d.xs{2}(:)];
     % interpolate old map into newly-sized map
@@ -41,7 +42,7 @@ function exp = create_map_data(params)
     occ_map(occ_map < map_data.free_thresh) = 0;
     occ_map(occ_map >= map_data.free_thresh) = 1; 
     % +1 for free 0 for occupied
-    exp.occ_map = occ_map; 
+    exp.known_occ_map = occ_map; 
     % +1 for free -1 for occupied 
     binary_occ_map = 2 * occ_map - 1;
     exp.binary_occ_map = binary_occ_map;
@@ -53,4 +54,11 @@ function exp = create_map_data(params)
     exp.obs_map = signed_obs_map;
     exp.masked_obs_map = masked_obs_map;
     exp.obstacle = repmat(exp.obs_map, 1, 1, exp.grid_3d.N(3));
+    
+    %% Create occupancy map data structure
+    exp.sensorArgs.sensor_shape = params.sensorArgs.sensor_shape; %'lidar'; %'camera'; 
+    exp.sensorArgs.sensor_radius = params.sensorArgs.sensor_radius;
+    exp.sensorArgs.sensor_fov = pi/6; 
+    exp.sensorArgs.far_plane = 2; %20; 
+    exp.unknown_occ_map = OccuMap(grid_3d, grid_2d, occ_map, exp.sensorArgs); 
 end 

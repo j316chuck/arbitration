@@ -2,7 +2,7 @@ function output_analysis()
     %% Change these parameters
     verbose = true;
     repo = what("arbitration"); 
-    output_folder = strcat(repo.path, '/outputs/');
+    output_folder = strcat(repo.path, '/results/1_31/');
     results_folder = strcat(output_folder, '/results/');
     output_mat_path = sprintf("%s/%s", results_folder, 'output_analysis.mat');
     if ~exist(results_folder, 'dir')
@@ -33,12 +33,16 @@ end
 
 function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...
         control_schemes, blend_schemes, params, verbose)   
+    % Metrics:
+    % avg lin jerk, avg ang jerk, avg safety score, avg dist to opt traj
+    % num timestamp, num safety, termination state, succeed, crashed, tle,
+    % errored, total time, avg time to plan
+    Nm = 13; % num metrics 
     Ns = 100; % start and goal pairs
     Nc = length(control_schemes); % control scheme
     Nb = length(blend_schemes); % blend scheme
     Nh = length(params); % hyperparameters
-    Nm = 11; % num metrics 
-    
+
     %% Set Default Values
     metrics = -ones(Ns, Nc, Nb, Nh, Nm);
     exp_names = cell(Ns * Nc * Nb * Nh, 1); 
@@ -79,7 +83,9 @@ function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...
                             fprintf("Crashed at beginning %s\n", exp_name); 
                             continue
                         end 
-                        num_safety = sum(obj.blend_traj(6, :) == 0); 
+                        num_safety = sum(obj.blend_traj(6, :) == 0);
+                        time_taken = mean(obj.total_exp_time(1:obj.cur_timestamp-1));
+                        time_plan = mean(obj.mpc_plan_time); 
                         metrics(i, j, k, h, :) = [obj.scores.avg_lin_jerk, ...
                                             obj.scores.avg_ang_jerk, ...
                                             obj.scores.avg_safety_score, ...
@@ -90,7 +96,9 @@ function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...
                                             obj.termination_state == 0, ...
                                             obj.termination_state == 1, ...
                                             obj.termination_state == 2, ...
-                                            obj.termination_state == -1];
+                                            obj.termination_state == -1, ... 
+                                            time_taken, ...
+                                            time_plan];
                         if verbose && obj.termination_state == -1
                            fprintf("Errored exp: %s\n", exp_name);  
                         elseif verbose && obj.termination_state == 1

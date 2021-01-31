@@ -11,9 +11,9 @@ function [exp] = load_exp(params)
     exp.stop_on_collision = true;
     exp.goal_map_2d = shapeCylinder(exp.grid_2d, 3, exp.goal(1:2), exp.goal_radius);
     exp.goal_map_3d = shapeCylinder(exp.grid_3d, 3, exp.goal(1:3), exp.goal_radius); 
-  
+    exp.environment_type = params.environment_type; 
+    
     %% Planners 
-    % Dynsys info
     exp.wMax = params.wMax;
     exp.vRange = params.vRange; %[0, 0.65]
     exp.dMax = params.dMax;
@@ -34,9 +34,8 @@ function [exp] = load_exp(params)
     reachAvoidSchemeData.grid = exp.grid_3d;
     reachAvoidSchemeData.uMode = 'min';
     reachAvoidSchemeData.dMode = 'max';
-    long_tau = 0:0.5:30;
     exp.reachAvoidSchemeData = reachAvoidSchemeData;
-    exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, long_tau); 
+    exp.reach_avoid_planner = ReachAvoidPlanner(exp.grid_3d, exp.reachAvoidSchemeData, params.tau); 
 
     %% Avoid BRS
     xstart = exp.start(1:3);
@@ -49,8 +48,10 @@ function [exp] = load_exp(params)
     avoidBrsSchemeData.grid = exp.grid_3d;
     avoidBrsSchemeData.uMode = 'max';
     avoidBrsSchemeData.dMode = 'min';
+    exp.updateMethod = 'HJI'; 
     exp.avoidBrsSchemeData = avoidBrsSchemeData; 
-    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, long_tau, exp.dt); 
+    tau = 0:exp.dt:10; 
+    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, tau, exp.dt); 
          
     %% Spline Planner
     xstart = exp.start(1:3);
@@ -59,9 +60,10 @@ function [exp] = load_exp(params)
     dMax = exp.dMax; 
     splineDynSys = Plane(xstart, wMax, vRange, dMax);
     exp.splineDynSys = splineDynSys;
-    exp.spline_planner = SplinePlanner(exp.num_waypts, exp.horizon, exp.grid_2d, exp.splineDynSys, exp.binary_occ_map);  
+    exp.spline_planner = SplinePlanner(exp.num_waypts, exp.horizon, exp.grid_2d, exp.splineDynSys, ... 
+                                      exp.binary_occ_map, params.spline_obs_weight);  
     exp.spline_planner.set_sd_goal(exp.goal, exp.goal_map_2d);
-    exp.spline_planner.set_sd_obs(exp.masked_obs_map, params.spline_obs_weight); 
+    exp.spline_planner.set_sd_obs(exp.masked_obs_map); 
     
     %% Blending Scheme
     exp.blending.blend_scheme = params.blend_scheme;
@@ -76,12 +78,15 @@ function [exp] = load_exp(params)
     exp.blending.blend_function_name = params.blend_function_name;
     exp.blending.blend_function = params.blend_function;
     exp.blending.num_mpc_safety_look_ahead = params.num_mpc_safety_look_ahead; 
+   
     %% Experiment Params
-    exp.hyperparam_str = params.hyperparam_str;
+    exp.hyperparam_str = get_hyperparam_string(params);
+    exp.point_nav_str = get_point_nav_str(params); 
+    exp.exp_name = get_exp_name(params); 
     exp.clear_dir = params.clear_dir; 
     exp.run_planner = params.run_planner;     
     exp.run_brs = params.run_brs; 
     exp.save_plot = params.save_plot; 
-    exp.plot_level = params.plot_level; 
+    exp.plot_level = params.plot_level;    
 end 
 

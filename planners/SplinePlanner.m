@@ -17,7 +17,7 @@ classdef SplinePlanner < handle
         gdisc
         disc_2d
         disc_3d
-        sd_obs
+        sd_obs 
         sd_goal
         start
         goal
@@ -25,18 +25,19 @@ classdef SplinePlanner < handle
         traj_xs
         traj_ys 
         replan_scores %x, y, safety_cost, replan_cost, reward
-        binary_occ_map
+        binary_occ_map % known obstacle map of the world, +1 free, -1 obstacle
         x2d
         y2d
         x3d 
         y3d
         t3d 
         all_costs
+        spline_obs_weight
     end
     
     methods
         %% Constructs Spline Planner.
-        function obj = SplinePlanner(num_waypts, horizon, grid_2d, dynSys, binary_occ_map)
+        function obj = SplinePlanner(num_waypts, horizon, grid_2d, dynSys, binary_occ_map, spline_obs_weight)
             obj.num_waypts = num_waypts;
             obj.horizon = horizon;
             obj.dt = horizon / (num_waypts - 1);
@@ -57,6 +58,7 @@ classdef SplinePlanner < handle
             [x3d, y3d, t3d] = meshgrid(grid_2d.vs{1}, grid_2d.vs{2}, obj.t3d); 
             obj.disc_3d = [x3d(:), y3d(:), t3d(:)];
             obj.binary_occ_map = binary_occ_map; 
+            obj.spline_obs_weight = spline_obs_weight; 
         end
         
         %% Sets the signed distance to goal.
@@ -64,9 +66,10 @@ classdef SplinePlanner < handle
             obj.goal = goal; 
             obj.sd_goal = sd_goal;
         end
+        
         %% Sets the signed distance to obstacle.
-        function obj = set_sd_obs(obj, sd_obs, weight)
-            obj.sd_obs = sd_obs * weight;
+        function obj = set_sd_obs(obj, sd_obs)
+            obj.sd_obs = sd_obs * obj.spline_obs_weight; 
         end
         
         %% Sets the num of spline planning points
@@ -699,6 +702,7 @@ classdef SplinePlanner < handle
             h = colorbar;
             caxis([min_alpha, max_alpha]);
             ylabel(h, 'alpha (low: more safe, high: more plan)');
+            hold off; 
         end
                 
         %% Plot all spline replan scores
@@ -723,6 +727,7 @@ classdef SplinePlanner < handle
             title("Obstacle");
             xlabel("x (m)");
             ylabel("y (m)"); 
+            hold off; 
             subplot(2, 2, 2); 
             hold on 
             contourf(obj.x2d, obj.y2d, safety_cost);
@@ -734,6 +739,7 @@ classdef SplinePlanner < handle
             title("Safety Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)"); 
+            hold off; 
             subplot(2, 2, 3); 
             hold on 
             contourf(obj.x2d, obj.y2d, replan_cost);
@@ -745,6 +751,7 @@ classdef SplinePlanner < handle
             title("Replan Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)"); 
+            hold off; 
             subplot(2, 2, 4); 
             hold on 
             contourf(obj.x2d, obj.y2d, reward);
@@ -756,6 +763,7 @@ classdef SplinePlanner < handle
             title("Alpha Blend Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)");
+            hold off; 
             if ~isempty(savefig_path)
                 savefig(savefig_path); 
             end 
@@ -768,6 +776,7 @@ classdef SplinePlanner < handle
             contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0]);
             plot(curr_spline{1}, curr_spline{2}, 'b--o'); 
             scatter(pt(1), pt(2), 20, 'rx'); 
+            hold off;
         end 
         
         %% Plot all spline costs that it evaluates
@@ -802,6 +811,7 @@ classdef SplinePlanner < handle
                     scatter(obj.start(1), obj.start(2), 100, 'rx'); 
                     th = obj.start(3);
                     quiver(obj.start(1), obj.start(2), cos(th), sin(th));
+                    hold off;
                 end 
                 if ~isempty(savefig_path)
                     path = sprintf("%s_%s.fig", savefig_path, name); 

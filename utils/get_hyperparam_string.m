@@ -1,6 +1,7 @@
 function [hyperparam_str] = get_hyperparam_string(params)
-    base_str = sprintf("grid_%s_zls_%.3f_replan_dt_%.3f_obs_weight_%.3f", ... 
-        params.grid_size, params.zero_level_set, params.replan_dt, params.spline_obs_weight);  
+    base_str = sprintf("grid_%s_zls_%.3f_replan_dt_%.3f_obs_weight_%.3f_sensor_%s_radius_%.2f", ... 
+        params.grid_size, params.zero_level_set, params.replan_dt, ...
+        params.spline_obs_weight, params.sensorArgs.sensor_shape, params.sensorArgs.sensor_radius); 
     if strcmp(params.blend_scheme, 'none')
         hyperparam_str = base_str; 
     elseif strcmp(params.blend_scheme, 'safety_value') 

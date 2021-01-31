@@ -37,4 +37,5 @@ function plot_scatter_metrics()
     title(t); 
     xlabel(metric_names{xi}); 
     ylabel(metric_names{yi});
+    hold off;
 end 

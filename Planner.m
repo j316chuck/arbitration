@@ -35,12 +35,19 @@ classdef Planner < handle
         scores
         termination_state
         use_safety_control
+        unknown_map
+        is_unknown_environment
+        sensor_shape
+        sensor_rad 
+        senseFOV 
+        farPlane
+        start_time
+        total_exp_time
+        mpc_plan_time
     end
     
     methods
         function obj = Planner(exp)
-            % Planner Construct an instance of this class
-            %   Detailed explanation goes here
             obj.exp = exp; 
             obj.start = exp.start;
             obj.goal = exp.goal;
@@ -54,7 +61,8 @@ classdef Planner < handle
             obj.control_scheme = exp.blending.control_scheme; 
             obj.dt = exp.dt; 
             obj.num_mpc_steps = ceil(obj.blending.replan_dt / obj.dt); % num steps we take in a mpc 
-            obj.replan_time_counter = obj.blending.replan_dt; %start of with a replan
+             % goes from [0-obj.blending.replan_dt], start of with a replan
+            obj.replan_time_counter = obj.blending.replan_dt;
             obj.num_waypts = exp.num_waypts;
             obj.horizon = exp.horizon;
             obj.reach_avoid_planner = exp.reach_avoid_planner;
@@ -62,19 +70,18 @@ classdef Planner < handle
             obj.spline_planner = exp.spline_planner;
             obj.dynSys = obj.spline_planner.dynSys;
             % stores the state (x), control (u), blending prob (alpha)
+            % 6 x N matrix where N is control trajectory
+            obj.blend_traj = []; % alpha = blending_scheme
             obj.orig_traj = []; % alpha = 1
             obj.safety_traj = [];  % alpha = 0
-            obj.blend_traj = []; % alpha = blending_scheme
             obj.switch_traj = []; % alpha = 0 if V(x) < 0 
             obj.termination_state = -1; 
-            
+            obj.start_time = tic; 
+            obj.total_exp_time = zeros(obj.max_num_planning_pts, 1); 
+            obj.mpc_plan_time = []; 
             % Logging information
             repo = what('arbitration');
-            start_str = sprintf("start_[%.2f %.2f %.2f]", exp.start(1), exp.start(2), exp.start(3)); 
-            goal_str = sprintf("goal_[%.2f %.2f %.2f]", exp.goal(1), exp.goal(2), exp.goal(3)); 
-            point_nav_str = sprintf("%s_map_%s_%s", exp.map_basename, start_str, goal_str); 
-            obj.exp_name = sprintf("%s_blend_%s_control_%s_%s", point_nav_str, ...
-                obj.blend_scheme, obj.control_scheme, exp.hyperparam_str); 
+            obj.exp_name = exp.exp_name; 
             obj.output_folder = strcat(repo.path, "/outputs/", obj.exp_name);
             obj.plot_level = obj.exp.plot_level;
             if exp.clear_dir && exist(obj.output_folder, 'dir')
@@ -93,17 +100,23 @@ classdef Planner < handle
                 load(filename, 'brs_planner'); 
                 obj.brs_planner = brs_planner;
             end 
-            
             if exp.run_planner
                 obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt);
                 reach_avoid_planner = obj.reach_avoid_planner;
-                filename = sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, point_nav_str); 
+                filename = sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, exp.point_nav_str); 
                 save(filename, 'reach_avoid_planner'); 
             else
-                filename =  sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, point_nav_str); 
+                filename =  sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, exp.point_nav_str); 
                 load(filename, 'reach_avoid_planner');
                 obj.reach_avoid_planner = reach_avoid_planner;
             end 
+            if strcmp(exp.environment_type, 'unknown')
+                obj.is_unknown_environment = true;
+                obj.unknown_map = exp.unknown_occ_map; 
+                obj.unknown_map.updateMapAndCost(exp.start);
+            else
+                obj.is_unknown_environment = false; 
+            end
         end
         
         %% Entry point
@@ -162,8 +175,12 @@ classdef Planner < handle
             obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
             nx = obj.dynSys.updateState(u, obj.dt, x'); % update state
             obj.state = [nx', u]; % new state and old control
+            obj.total_exp_time(obj.cur_timestamp) = toc(obj.start_time); 
             obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
             obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
+            if obj.is_unknown_environment
+                obj.unknown_map.updateMapAndCost(nx); 
+            end 
         end 
         
         %% Replan original plans
@@ -301,6 +318,13 @@ classdef Planner < handle
         
         %% Plan high level mpc plan for obj.horizon time to be taken for obj.num_mpc_steps iterations
         function plan_mpc_controls(obj)
+            tic
+            if obj.is_unknown_environment
+                spline_obs_map = obj.unknown_map.signed_dist_planner; 
+                obj.spline_planner.set_sd_obs(spline_obs_map); 
+                safety_map = obj.unknown_map.signed_dist_safety; 
+                obj.brs_planner.solve_brs_avoid(safety_map); 
+            end 
             obj.replan_time_counter = 0;
             obj.use_safety_control = false; 
             plan = obj.spline_planner.plan(obj.state); 
@@ -322,9 +346,9 @@ classdef Planner < handle
                 obj.replan_sample_safety_value(plan); 
             elseif strcmp(obj.blend_scheme, 'sample_safety_control')
                 obj.replan_sample_safety_control(plan, safety_plan); 
-            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_open_loop_safety_control')
+            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_open_loop')
                 obj.replan_time_vary_alpha_open_loop_safety_control(plan, safety_plan); 
-            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_closed_loop_safety_control')
+            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_closed_loop')
                 obj.replan_time_vary_alpha_closed_loop_safety_control(plan); 
             elseif strcmp(obj.blend_scheme, 'replan_waypoint')
                 obj.replan_waypoint(plan); 
@@ -335,7 +359,9 @@ classdef Planner < handle
                 return 
             end 
             obj.verbose_plot(2);     % plot metrics and robot path
+            obj.plot_unknown_maps(2); % unknown map logging
             %obj.plot_spline_cost(2); % spline planner debugging
+            obj.mpc_plan_time(end+1) = toc; 
         end 
         
         %% Helper Functions
@@ -501,69 +527,81 @@ classdef Planner < handle
             clf;
             hold on; 
             set(gcf,'Position', [10 10 800 1200])
-            subplot(5, 2, 1); 
+            subplot(6, 2, 1); 
             plot(1:length(obj.scores.lin_vel), obj.scores.lin_vel, 'bo--');
             title("Linear Velocity");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(5, 2, 2); 
+            subplot(6, 2, 2); 
             plot(1:length(obj.scores.ang_vel), obj.scores.ang_vel, 'bo--');
             title("Angular Velocity");
             xlabel("iteration");
             ylabel("rps"); 
-            subplot(5, 2, 3); 
+            subplot(6, 2, 3); 
             plot(1:length(obj.scores.lin_accel), obj.scores.lin_accel, 'bo--');
             title("Linear Accel");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(5, 2, 4); 
+            subplot(6, 2, 4); 
             plot(1:length(obj.scores.ang_accel), obj.scores.ang_accel, 'bo--');
             title("Angular Accel");
             xlabel("iteration");
             ylabel("rps"); 
-            subplot(5, 2, 5); 
+            subplot(6, 2, 5); 
             plot(1:length(obj.scores.lin_jerk), obj.scores.lin_jerk, 'bo--');
             title("Linear Jerk");
             xlabel("iteration");
             ylabel("mps"); 
-            subplot(5, 2, 6); 
+            subplot(6, 2, 6); 
             plot(1:length(obj.scores.ang_jerk), obj.scores.ang_jerk, 'bo--');
             title("Angular Jerk");
             xlabel("iteration");
             ylabel("rps"); 
-            subplot(5, 2, 7); 
+            subplot(6, 2, 7); 
             plot(1:length(obj.scores.safety_score), obj.scores.safety_score, 'bo--');
             title("Safety Score");
             xlabel("iteration");
             ylabel("brs value function"); 
-            subplot(5, 2, 8); 
+            subplot(6, 2, 8); 
             plot(1:length(obj.blend_traj(6, :)), obj.blend_traj(6, :), 'bo--');
             title("Blend Probability");
             xlabel("iteration");
             ylabel("alpha");
-            subplot(5, 2, 9); 
+            subplot(6, 2, 9); 
             plot(1:length(obj.scores.dist_to_opt_traj), obj.scores.dist_to_opt_traj, 'bo--');
             title("Dist to Opt Traj");
             xlabel("iteration");
             ylabel("meters"); 
-            subplot(5, 2, 10); 
+            subplot(6, 2, 10); 
             plot(1:length(obj.scores.dist_to_goal), obj.scores.dist_to_goal, 'bo--');
             title("Dist to Goal");
             xlabel("iteration");
             ylabel("meters"); 
+            subplot(6, 2, 11); 
+            plot(1:obj.cur_timestamp-1, obj.total_exp_time(1:obj.cur_timestamp-1), 'bo--');
+            title("Total Experiment Time");
+            xlabel("timestamp");
+            ylabel("seconds"); 
+            subplot(6, 2, 12); 
+            plot(1:length(obj.mpc_plan_time), obj.mpc_plan_time, 'bo--');
+            title("MPC Planning Time");
+            xlabel("iteration");
+            ylabel("seconds"); 
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/metrics.fig", obj.output_folder);
                 savefig(savefigpath); 
-            end 
-        end 
+            end
+            hold off;    
+        end
         
         function plot_triangular_traj(obj, traj, v1, v2)
             figure(6);
             hold on;
             contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0]);
-            obj.plot_traj(traj(1, :), traj(2, :), traj(3, :), 'red', 'spline');
+            plot_traj(traj(1, :), traj(2, :), traj(3, :), 'red', 'spline');
             scatter(v1(1), v1(2), 30, 'bo'); 
             scatter(v2(1), v2(2), 30, 'bo');
+            hold off;
         end 
         
         function plot_safety_score_blended_traj(obj, plan_x, plan_y, safe_x, safe_y, blended_plan, alphas)
@@ -594,13 +632,14 @@ classdef Planner < handle
             ylabel(h, 'alpha (low: more safe, high: more plan)');
             % plot the goal.
             scatter(obj.goal(1), obj.goal(2), 100, 'k', 'x', 'DisplayName', 'goal'); 
+            hold off;
         end 
         
        
         function plot_planners(obj)
             figure(5);
             clf;
-            hold on 
+            hold on; 
             set(gcf,'Position',[10 10 1000 800])
             % plot environment, goal, and start
             contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0], 'DisplayName', 'binary_obs_map', 'color', 'black');
@@ -618,21 +657,21 @@ classdef Planner < handle
                 mpc_spline_xs = obj.orig_traj(1, :); 
                 mpc_spline_ys = obj.orig_traj(2, :); 
                 mpc_spline_ths = obj.orig_traj(3, :); 
-                obj.plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'orig traj');   
+                plot_traj(mpc_spline_xs, mpc_spline_ys, mpc_spline_ths, 'red', 'orig traj');   
             end 
             % plot switch mpc traj
             if ~isempty(obj.switch_traj)
                 switch_xs = obj.switch_traj(1, :); 
                 switch_ys = obj.switch_traj(2, :); 
                 switch_ths = obj.switch_traj(3, :); 
-                obj.plot_traj(switch_xs, switch_ys, switch_ths, 'blue', 'switch traj');   
+                plot_traj(switch_xs, switch_ys, switch_ths, 'blue', 'switch traj');   
             end 
             % plot safety_traj
             if ~isempty(obj.safety_traj)
                 safety_spline_xs = obj.safety_traj(1, :); 
                 safety_spline_ys = obj.safety_traj(2, :); 
                 safety_spline_ths = obj.safety_traj(3, :); 
-                obj.plot_traj(safety_spline_xs, safety_spline_ys, safety_spline_ths, 'magenta', 'safety traj');    
+                plot_traj(safety_spline_xs, safety_spline_ys, safety_spline_ths, 'magenta', 'safety traj');    
             end
             % plot blending traj
             if ~isempty(obj.blend_traj)
@@ -641,13 +680,13 @@ classdef Planner < handle
                 blend_ths = obj.blend_traj(3, :); 
                 use_avoid_probs = obj.blend_traj(6, :);
                 blend_name = obj.blend_scheme;
-                obj.plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
+                plot_traj_probs(blend_xs, blend_ys, blend_ths, use_avoid_probs, blend_name);
             end 
             % plot reach avoid traj
             reach_avoid_xs = obj.reach_avoid_planner.opt_traj(1, :);
             reach_avoid_ys = obj.reach_avoid_planner.opt_traj(2, :);
             reach_avoid_ths = obj.reach_avoid_planner.opt_traj(3, :);
-            obj.plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
+            plot_traj(reach_avoid_xs, reach_avoid_ys, reach_avoid_ths, 'green', 'reach avoid');
             % figure parameters
             view(0, 90)
             set(gcf, 'color', 'white')
@@ -668,10 +707,12 @@ classdef Planner < handle
                 obj.objective_str = sprintf('%s\n%s\n%s\n%s\n%s', aljs, aajs, adgs, assh, adot); 
                 annotation('textbox', [.7 .90 1 .0],'String', obj.objective_str, 'FitBoxToText', 'on', 'Interpreter', 'None');
             end 
+            colorbar;
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/planners_%d.fig", obj.output_folder, obj.cur_timestamp);
                 savefig(savefigpath); 
             end 
+            hold off;    
         end 
         
         function plot_spline_replan(obj, threshold)
@@ -685,6 +726,77 @@ classdef Planner < handle
             obj.spline_planner.plot_replan_scores(savefigpath);
         end 
         
+        function plot_unknown_maps(obj, threshold)
+            if obj.plot_level >= threshold 
+                return 
+            end 
+            if ~obj.is_unknown_environment
+                return 
+            end 
+            figure(2); 
+            set(gcf,'Position', [10 10 1200 1000])
+            clf
+            % Plot safety occupancy map
+            subplot(2, 2, 1); 
+            bx = obj.blend_traj(1, 1:obj.cur_timestamp);
+            by = obj.blend_traj(2, 1:obj.cur_timestamp);
+            bt = obj.blend_traj(3, 1:obj.cur_timestamp);
+            hold on;
+            contourf(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.unknown_map.occupancy_map_safety, [0 0], 'DisplayName', 'safety', 'color', 'blue');
+            plot_traj(bx, by, bt, 'red', 'orig traj'); 
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0], 'DisplayName', 'obstacle', 'color', 'black');
+            xlabel("x(m)"); 
+            ylabel("y(m)"); 
+            legend('Location', 'NorthWest', 'Interpreter', 'None');
+            colorbar; 
+            title("Occ Map Safety");
+            hold off;
+            % Plot safety signed dist map
+            subplot(2, 2, 2); 
+            hold on;
+            contourf(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.unknown_map.safety_fmm, 'DisplayName', 'safety');
+            plot_traj(bx, by, bt, 'red', 'orig traj'); 
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0], 'DisplayName', 'obstacle', 'color', 'black');
+            xlabel("x(m)"); 
+            ylabel("y(m)"); 
+            legend('Location', 'NorthWest', 'Interpreter', 'None');
+            colorbar; 
+            title("Signed Dist Safety");
+            hold off;
+            % Plot planner occupancy map
+            subplot(2, 2, 3); 
+            hold on;
+            plot_traj(bx, by, bt, 'red', 'orig traj'); 
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0], 'DisplayName', 'obstacle', 'color', 'black');
+            zls = obj.blending.zero_level_set; 
+            name = sprintf("BRS (theta=%.2f, levelset=%.2f)", obj.state(3), zls);
+            [~, vf_slice] = proj(obj.exp.grid_3d, obj.brs_planner.valueFun, [0 0 1], obj.state(3));
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, vf_slice, [zls, zls], 'DisplayName', name, 'color', '#CC1FCB');
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.unknown_map.occupancy_map_planner, [0 0], 'DisplayName', 'planner', 'color', 'blue');
+            xlabel("x(m)"); 
+            ylabel("y(m)"); 
+            legend('Location', 'NorthWest', 'Interpreter', 'None');
+            colorbar; 
+            title("Occ Map Planner");
+            hold off;
+            % Plot safety signed dist map
+            subplot(2, 2, 4); 
+            hold on;
+            contourf(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.unknown_map.signed_dist_planner, 'DisplayName', 'planner');
+            plot_traj(bx, by, bt, 'red', 'orig traj'); 
+            contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, obj.exp.binary_occ_map, [0 0], 'DisplayName', 'obstacle', 'color', 'black');
+            xlabel("x(m)"); 
+            ylabel("y(m)"); 
+            legend('Location', 'NorthWest', 'Interpreter', 'None');
+            colorbar; 
+            title("Signed Dist Planner");
+            hold off;
+            if obj.exp.save_plot
+                savefigpath = sprintf("%s/unknown_map_%d.fig", obj.output_folder, obj.cur_timestamp);
+                savefig(savefigpath); 
+            end
+        end 
+        
         function plot_spline_cost(obj, threshold)
             if obj.plot_level >= threshold 
                 return 
@@ -694,53 +806,6 @@ classdef Planner < handle
                 savefigpath = sprintf("%s/spline_cost_timestamp_%d", obj.output_folder, obj.cur_timestamp);  
             end 
             obj.spline_planner.plot_spline_costs(savefigpath);
-        end 
-        
-        
-        function plot_traj(obj, xs, ys, ths, color, name)
-            s = scatter(xs, ys, 15, 'black', 'filled', 'DisplayName', name);
-            s.HandleVisibility = 'off';
-            q = quiver(xs, ys, cos(ths), sin(ths), 'Color', color);
-            q.DisplayName = name;
-            q.HandleVisibility = 'on';
-            q.ShowArrowHead = 'on';
-            q.AutoScale = 'on';
-            q.AutoScaleFactor = 0.1;
-        end
-
-        function plot_traj_probs(obj, xs, ys, ths, probs, name)
-            s = scatter(xs, ys, 15, 'black', 'filled');
-            s.HandleVisibility = 'off';
-            q = quiver(xs, ys, cos(ths), sin(ths));
-            obj.set_quiver_colors(q, probs); 
-            q.HandleVisibility = 'on';
-            q.ShowArrowHead = 'on';
-            q.AutoScale = 'on';
-            q.DisplayName = name;
-            q.AutoScaleFactor = 0.1;
-        end
-        
-        function set_quiver_colors(obj, q, probs)
-            %// Get the current colormap
-            currentColormap = colormap(gca);
-
-            %// Now determine the color to make each arrow using a colormap
-            [~, ~, ind] = histcounts(probs, size(currentColormap, 1));
-
-            %// Now map this to a colormap to get RGB
-            cmap = uint8(ind2rgb(ind(:), currentColormap) * 255);
-            cmap(:,:,4) = 255;
-            cmap = permute(repmat(cmap, [1 3 1]), [2 1 3]);
-
-            %// We repeat each color 3 times (using 1:3 below) because each arrow has 3 vertices
-            set(q.Head, ...
-                'ColorBinding', 'interpolated', ...
-                'ColorData', reshape(cmap(1:3,:,:), [], 4).');   %'
-
-            %// We repeat each color 2 times (using 1:2 below) because each tail has 2 vertices
-            set(q.Tail, ...
-                'ColorBinding', 'interpolated', ...
-                'ColorData', reshape(cmap(1:2,:,:), [], 4).');
         end 
     end
 end

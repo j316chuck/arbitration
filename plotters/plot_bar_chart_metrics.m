@@ -153,6 +153,7 @@ function plot_bar_chart_metrics()
 
     % Add title over whole thing:
     sgtitle(title_name)
+    hold off;
 end
 
 

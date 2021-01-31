@@ -7,7 +7,7 @@ classdef BRSAvoidPlanner < handle
         schemeData
         dynSys
         tau
-        obstacle_map
+        obstacle_map % negative inside obstacle, positive outside
         data
         data_tau
         valueFun
@@ -31,7 +31,12 @@ classdef BRSAvoidPlanner < handle
             obj.tau = tau;
             obj.dt = dt; 
             % Extra Args
-            obj.extraArgs.visualize = true;
+            obj.extraArgs.quiet = true;
+            obj.extraArgs.visualize.figNum = 15;
+            obj.extraArgs.visualize.deleteLastPlot = true;
+            obj.extraArgs.visualize.viewGrid = false;
+            obj.extraArgs.visualize.initialValueSet = 1;
+            obj.extraArgs.visualize.valueSet = 1;
             obj.extraArgs.plotData.plotDims = [1 1 0];
             obj.extraArgs.plotData.projpt = 0;
             obj.extraArgs.stopConvergeTTR = false;
@@ -45,7 +50,7 @@ classdef BRSAvoidPlanner < handle
             obj.obstacle_map = obstacle_map;
             % Solve 
             [obj.data, obj.data_tau, ~] = ...
-                HJIPDE_solve(obj.obstacle_map, obj.tau, obj.schemeData, 'minVOverTime', obj.extraArgs);          
+                HJIPDE_solve(obj.obstacle_map, obj.tau, obj.schemeData, 'minVOverTime', obj.extraArgs);   
             obj.valueFun = obj.data(:, :, :, end);
             obj.derivValueFun = computeGradients(obj.grid, obj.valueFun);
         end 
@@ -55,7 +60,7 @@ classdef BRSAvoidPlanner < handle
             % Value of the derivative at that particular state
             current_deriv = eval_u(obj.grid, obj.derivValueFun, x);
             % Get the optimal control to apply at this state
-            uOpt = obj.dynSys.optCtrl(obj.data_tau(end), x, current_deriv, obj.schemeData.uMode);
+            uOpt = obj.dynSys.optCtrl(obj.data_tau(end), x, current_deriv, obj.schemeData.uMode, NaN);
         end
         
         function [value] = get_value(obj, x)

@@ -9,8 +9,8 @@ classdef ReachAvoidPlanner < handle
         tau
         xstart
         xgoal 
-        goal_map
-        obstacle_map
+        goal_map % negative inside goal positive outside
+        obstacle_map % negative inside obstacle positive outside
         data
         valueFun
         data_tau
