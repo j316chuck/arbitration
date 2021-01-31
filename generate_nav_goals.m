@@ -58,6 +58,7 @@ function [starts, goals] = generate_nav_goals(N, min_dist, regen_points, seed_nu
     title('Sampled Goals');
     savefig(strcat(repo.path,'/data/valid_sampled_goals.fig'));
     save(strcat(repo.path,'/data/valid_sampled_goals.mat'), 'starts', 'goals');
+    hold off
 end 
 
 function [sampled_points] = generate_nav_points(exp)
@@ -67,7 +68,8 @@ function [sampled_points] = generate_nav_points(exp)
     counts = 0;
     sampled_x = [];
     sampled_y = [];
-    hold on;
+    %figure(4); 
+    %hold on;
     while counts < N
         x = sample_1d(exp.grid_3d.min(1), exp.grid_3d.max(1), N-counts);
         y = sample_1d(exp.grid_3d.min(2), exp.grid_3d.max(2), N-counts);
@@ -82,6 +84,7 @@ function [sampled_points] = generate_nav_points(exp)
         %scatter(x(invalid_ind), y(invalid_ind), 10, 'b');
         %scatter(sampled_x, sampled_y, 20, 'ro');
     end 
+    %hold off;
     sampled_t = sample_1d(exp.grid_3d.min(3), exp.grid_3d.max(3), N)';
     sampled_points = [sampled_x; sampled_y; sampled_t];
     
@@ -101,6 +104,7 @@ function [sampled_points] = generate_nav_points(exp)
     repo = what('arbitration');
     save(strcat(repo.path,'/data/valid_sampled_points.mat'), 'sampled_points');
     savefig(strcat(repo.path,'/data/valid_sampled_points.fig'));
+    hold off;
 end 
 
 function d = l2_dist(x1, x2, y1, y2)

@@ -72,27 +72,21 @@ classdef OccuMap < handle
         function updateMapAndCost(obj, robot_pos)
             % Construct cost function for region outside sensing radius
             % or 'known' environment. +1 sensed, -1 unsensed 
-            if strcmp(obj.sensor_shape, 'circle') %|| obj.first_compute
-                sensing_shape = -shapeCylinder(obj.grid, 3, robot_pos(1:2), obj.sensor_radius);
-                [~, data_sensed] = proj(obj.grid, sensing_shape, [0 0 1], 0);
-            elseif strcmp(obj.sensor_shape, 'camera') 
-                [data_sensed, ~] = generate_camera_sensing_region(robot_pos, ...
-                obj.grid_2d, obj.binary_occ_map, obj.sensor_fov, obj.far_plane);
-            elseif strcmp(obj.sensor_shape, 'lidar')
-                [data_sensed, ~] = generate_lidar_sensing_region(robot_pos(1:2), ...
+            if strcmp(obj.sensor_shape, 'lidar') || obj.first_compute || strcmp(obj.sensor_shape, 'circle')
+                [occ_grid, sensed_region] = generate_lidar_sensing_region(robot_pos(1:2), ...
                         obj.grid_2d, obj.binary_occ_map, obj.sensor_radius); 
+            elseif strcmp(obj.sensor_shape, 'camera') 
+                [occ_grid, sensed_region] = generate_camera_sensing_region(robot_pos, ...
+                obj.grid_2d, obj.binary_occ_map, obj.sensor_fov, obj.far_plane);
             else
                error('Unrecognized sensor type');
             end
            
             % Update occupancy grid with newly sensed obstacles.
-            sensed_inds = data_sensed > 0;
-            sensed_obs = sensed_inds .* obj.masked_occ_map;
-            sensed_obs_inds = find(sensed_obs > 0); 
-            obj.occupancy_map_planner(sensed_obs_inds) = -1; % set planner free to occupied
-            sensed_free = sensed_inds .* obj.masked_free_map; 
-            sensed_free_inds = find(sensed_free > 0); 
+            sensed_free_inds = find(occ_grid > 0);
             obj.occupancy_map_safety(sensed_free_inds) = 1; % set safety occupied to free
+            sensed_obs_inds = find((sensed_region > 0) .* obj.masked_occ_map); 
+            obj.occupancy_map_planner(sensed_obs_inds) = -1; % set planner free to occupied
             obj.first_compute = false; 
  
             % Save out the occupancy maps and trajectories for plotting
@@ -105,7 +99,7 @@ classdef OccuMap < handle
             obj.planner_fmm = compute_fmm_map(obj.grid_2d, obj.occupancy_map_planner); 
             obj.signed_dist_safety = repmat(obj.safety_fmm, 1, 1, obj.grid.N(3));
             obj.signed_dist_planner = -obj.planner_fmm .* (obj.occupancy_map_planner < 0);
-            obj.plot_occ_map(); 
+            %obj.plot_occ_map(); 
         end
         
         function plot_occ_map(obj)
@@ -123,6 +117,7 @@ classdef OccuMap < handle
             legend('Location', 'NorthWest', 'Interpreter', 'None');
             colorbar; 
             title("Occ Map Safety");
+            hold off;
             % Plot safety signed dist map
             subplot(2, 2, 2); 
             hold on;
@@ -134,6 +129,7 @@ classdef OccuMap < handle
             legend('Location', 'NorthWest', 'Interpreter', 'None');
             colorbar; 
             title("Signed Dist Safety");
+            hold off;
             % Plot planner occupancy map
             subplot(2, 2, 3); 
             hold on;
@@ -144,7 +140,8 @@ classdef OccuMap < handle
             ylabel("y(m)"); 
             legend('Location', 'NorthWest', 'Interpreter', 'None');
             colorbar; 
-            title("Occ Map Planner"); 
+            title("Occ Map Planner");
+            hold off;
             % Plot safety signed dist map
             subplot(2, 2, 4); 
             hold on;
@@ -156,6 +153,7 @@ classdef OccuMap < handle
             legend('Location', 'NorthWest', 'Interpreter', 'None');
             colorbar; 
             title("Signed Dist Planner");
+            hold off;
         end
     end    
 end

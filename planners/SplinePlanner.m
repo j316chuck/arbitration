@@ -702,6 +702,7 @@ classdef SplinePlanner < handle
             h = colorbar;
             caxis([min_alpha, max_alpha]);
             ylabel(h, 'alpha (low: more safe, high: more plan)');
+            hold off; 
         end
                 
         %% Plot all spline replan scores
@@ -726,6 +727,7 @@ classdef SplinePlanner < handle
             title("Obstacle");
             xlabel("x (m)");
             ylabel("y (m)"); 
+            hold off; 
             subplot(2, 2, 2); 
             hold on 
             contourf(obj.x2d, obj.y2d, safety_cost);
@@ -737,6 +739,7 @@ classdef SplinePlanner < handle
             title("Safety Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)"); 
+            hold off; 
             subplot(2, 2, 3); 
             hold on 
             contourf(obj.x2d, obj.y2d, replan_cost);
@@ -748,6 +751,7 @@ classdef SplinePlanner < handle
             title("Replan Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)"); 
+            hold off; 
             subplot(2, 2, 4); 
             hold on 
             contourf(obj.x2d, obj.y2d, reward);
@@ -759,6 +763,7 @@ classdef SplinePlanner < handle
             title("Alpha Blend Cost (Theta 0)");
             xlabel("x (m)");
             ylabel("y (m)");
+            hold off; 
             if ~isempty(savefig_path)
                 savefig(savefig_path); 
             end 
@@ -771,6 +776,7 @@ classdef SplinePlanner < handle
             contour(obj.grid_2d.xs{1}, obj.grid_2d.xs{2}, obj.binary_occ_map, [0 0]);
             plot(curr_spline{1}, curr_spline{2}, 'b--o'); 
             scatter(pt(1), pt(2), 20, 'rx'); 
+            hold off;
         end 
         
         %% Plot all spline costs that it evaluates
@@ -805,6 +811,7 @@ classdef SplinePlanner < handle
                     scatter(obj.start(1), obj.start(2), 100, 'rx'); 
                     th = obj.start(3);
                     quiver(obj.start(1), obj.start(2), cos(th), sin(th));
+                    hold off;
                 end 
                 if ~isempty(savefig_path)
                     path = sprintf("%s_%s.fig", savefig_path, name); 

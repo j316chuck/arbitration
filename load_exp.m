@@ -50,7 +50,8 @@ function [exp] = load_exp(params)
     avoidBrsSchemeData.dMode = 'min';
     exp.updateMethod = 'HJI'; 
     exp.avoidBrsSchemeData = avoidBrsSchemeData; 
-    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, params.tau, exp.dt, exp.updateMethod); 
+    tau = 0:exp.dt:10; 
+    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, tau, exp.dt); 
          
     %% Spline Planner
     xstart = exp.start(1:3);

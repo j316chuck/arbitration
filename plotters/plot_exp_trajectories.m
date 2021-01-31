@@ -89,6 +89,7 @@ function plot_exp_trajectories(index)
     png_path = strcat(plot_path, ".png");
     savefig(fig_path); 
     saveas(gcf, png_path); 
+    hold off;
 end
 
 function theta = calc_zls_theta(start, goal)
