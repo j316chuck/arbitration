@@ -3,7 +3,7 @@ function runner(start_pos, end_pos)
     no_rerun = true; 
     dry_run = false; 
     run_planners = false; 
-    blend_schemes = {'replan_safe_traj', 'none', 'sample_safety_control', 'time_vary_alpha_open_loop_safety_control'};    
+    blend_schemes = {'replan_safe_traj', 'none', 'sample_safety_control', 'time_vary_alpha_open_loop'};    
     control_schemes = {'switch'};   
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 

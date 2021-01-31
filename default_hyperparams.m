@@ -28,8 +28,8 @@ function [params] = default_hyperparams()
     params.goal = g{1}; 
     
     %% Blend Scheme
-    %params.blend_scheme = 'time_vary_alpha_open_loop_safety_control'; 
-    %params.blend_scheme = 'time_vary_alpha_closed_loop_safety_control'; 
+    %params.blend_scheme = 'time_vary_alpha_open_loop'; 
+    %params.blend_scheme = 'time_vary_alpha_closed_loop'; 
     %params.blend_scheme = 'safety_value'; 
     %params.blend_scheme = 'safety_control'; 
     %params.blend_scheme = 'sample_safety_value'; 

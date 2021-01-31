@@ -346,9 +346,9 @@ classdef Planner < handle
                 obj.replan_sample_safety_value(plan); 
             elseif strcmp(obj.blend_scheme, 'sample_safety_control')
                 obj.replan_sample_safety_control(plan, safety_plan); 
-            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_open_loop_safety_control')
+            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_open_loop')
                 obj.replan_time_vary_alpha_open_loop_safety_control(plan, safety_plan); 
-            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_closed_loop_safety_control')
+            elseif strcmp(obj.blend_scheme, 'time_vary_alpha_closed_loop')
                 obj.replan_time_vary_alpha_closed_loop_safety_control(plan); 
             elseif strcmp(obj.blend_scheme, 'replan_waypoint')
                 obj.replan_waypoint(plan); 

@@ -4,7 +4,7 @@ function plot_exp_trajectories(index)
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'};
+    blend_schemes = {'time_vary_alpha_open_loop', 'sample_safety_control', 'replan_safe_traj', 'none'};
     labels = {'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; %get_new_alpha_blend_function_names(); 
     colors = get_all_blend_scheme_colors();
     hyperparam_str = "default"; 
