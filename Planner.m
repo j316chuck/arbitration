@@ -707,6 +707,7 @@ classdef Planner < handle
                 obj.objective_str = sprintf('%s\n%s\n%s\n%s\n%s', aljs, aajs, adgs, assh, adot); 
                 annotation('textbox', [.7 .90 1 .0],'String', obj.objective_str, 'FitBoxToText', 'on', 'Interpreter', 'None');
             end 
+            colorbar;
             if obj.exp.save_plot
                 savefigpath = sprintf("%s/planners_%d.fig", obj.output_folder, obj.cur_timestamp);
                 savefig(savefigpath); 

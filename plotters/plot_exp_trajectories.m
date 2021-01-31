@@ -1,10 +1,13 @@
 function plot_exp_trajectories(index)
+    if nargin < 1
+        index = 1;
+    end
     %% Change these parameters
     output_name = "/results/1_31"; 
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
-    blend_schemes = {'time_vary_alpha_open_loop', 'sample_safety_control', 'replan_safe_traj', 'none'};
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'}; %get_key_blend_schemes()
     labels = {'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; %get_new_alpha_blend_function_names(); 
     colors = get_all_blend_scheme_colors();
     hyperparam_str = "default"; 
@@ -47,8 +50,8 @@ function plot_exp_trajectories(index)
                     color = colors(k, :);
                     legend_name = labels{k};
                 end 
-                params.blend_scheme = blend_schemes{k}; 
-                params.control_scheme = control_schemes{j}; 
+                params.blend_scheme = bs;
+                params.control_scheme = cs;
                 params.hyperparam_str = get_hyperparam_string(params); 
                 params.run_planner = false;
                 params.run_brs = false; 
@@ -75,7 +78,7 @@ function plot_exp_trajectories(index)
                         plot_traj(obj.reach_avoid_planner.opt_traj, 'reach avoid', 'green'); 
                     end
                     if plot_all_zls
-                        plot_zls(obj, bs, zls_theta, color); 
+                        plot_zls(obj, legend_name, zls_theta, color); 
                     else 
                         plot_zls(obj, 'bookstore', zls_theta, '#CC1FCB'); 
                     end
@@ -90,13 +93,22 @@ function plot_exp_trajectories(index)
         end 
     end 
     set_plot_params(plot_name);
-    plot_path = strcat(results_folder, "/", plot_name); 
-    fig_path = strcat(plot_path, ".fig"); 
-    png_path = strcat(plot_path, ".png");
+    
+    %% Saving to png and fig folder
+    results_png_folder = strcat(results_folder, "/all_traj_png"); 
+    if ~exist(results_png_folder, 'dir')
+        mkdir(results_png_folder); 
+    end 
+    results_fig_folder = strcat(results_folder, "/all_traj_fig"); 
+    if ~exist(results_fig_folder, 'dir')
+        mkdir(results_fig_folder); 
+    end 
+    fig_path = strcat(results_fig_folder, "/", plot_name, ".fig"); 
     savefig(fig_path); 
+    png_path = strcat(results_png_folder, "/", plot_name, ".png");
     saveas(gcf, png_path); 
     hold off;
-    pause(0.5);
+    pause(1);
 end
 
 function theta = calc_zls_theta(start, goal)
@@ -137,7 +149,7 @@ function set_plot_params(name)
     ylabel('y (meters)');
     l = legend('Location', 'SouthWest');
     set(l, 'Interpreter', 'none', 'fontsize', 5);
-    set(l,'position', [0.27 0.78 0.02 0.02]);
+    set(l,'position', [0.25 0.75 0.02 0.02]);
     title(name, 'Interpreter', 'None');
 end 
 

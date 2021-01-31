@@ -9,7 +9,7 @@ function output_analysis()
         mkdir(results_folder); 
     end
     control_schemes = {'switch'};
-    blend_schemes = {'time_vary_alpha_open_loop', 'replan_safe_traj', 'none', 'sample_safety_control'};
+    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'replan_safe_traj', 'none', 'sample_safety_control'};
     [starts, goals] = get_point_nav_tasks("sampled"); %"sampled" %"smoke_test"
     params = get_hyperparam_sets("default"); %"time_vary_open" %"default" %"replan_zls"
 
