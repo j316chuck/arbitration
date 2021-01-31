@@ -46,9 +46,11 @@ function [params] = default_hyperparams()
     
     %% Environment Scheme
     params.environment_type = 'unknown'; % 'known' 
+    params.sensorArgs.sensor_shape = 'lidar'; %'camera'
+    params.sensorArgs.sensor_radius = 2;
 
     %% Blending Scheme
-    params.replan_dt = 1.0;
+    params.replan_dt = 1.5;
     params.zero_level_set = 0.15;
     params.replan_level_set = 0.3; 
     params.replan_spline_max_num_candidates = 10; 

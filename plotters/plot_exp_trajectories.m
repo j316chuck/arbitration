@@ -1,6 +1,6 @@
 function plot_exp_trajectories(index)
     %% Change these parameters
-    output_name = "/results/1_25_all_map"; 
+    output_name = "/results/1_31"; 
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
@@ -14,8 +14,9 @@ function plot_exp_trajectories(index)
     Nb = length(blend_schemes); 
     start = starts{index};  
     goal = goals{index};
-    title_str = "key_alpha_blending_schemes_switch_control"; 
+    title_str = "unknown_key_alpha_blending_schemes_switch_control"; 
     plot_hyperparam = false; 
+    plot_all_zls = true;
 
     %% Extract Data Paths
     repo = what("arbitration"); 
@@ -71,9 +72,13 @@ function plot_exp_trajectories(index)
                     if first_iteration
                         first_iteration = false;
                         plot_env(obj);
-                        plot_zls(obj, zls_theta); 
                         plot_traj(obj.reach_avoid_planner.opt_traj, 'reach avoid', 'green'); 
-                    end 
+                    end
+                    if plot_all_zls
+                        plot_zls(obj, bs, zls_theta, color); 
+                    else 
+                        plot_zls(obj, 'bookstore', zls_theta, '#CC1FCB'); 
+                    end
                     plot_traj(obj.blend_traj, legend_name, color); 
                     set_plot_params(plot_name);
                     exp_ran = true; 
@@ -84,12 +89,14 @@ function plot_exp_trajectories(index)
             end 
         end 
     end 
+    set_plot_params(plot_name);
     plot_path = strcat(results_folder, "/", plot_name); 
     fig_path = strcat(plot_path, ".fig"); 
     png_path = strcat(plot_path, ".png");
     savefig(fig_path); 
     saveas(gcf, png_path); 
     hold off;
+    pause(0.5);
 end
 
 function theta = calc_zls_theta(start, goal)
@@ -142,10 +149,10 @@ function plot_env(obj)
     scatter(obj.start(1), obj.start(2), 75, 'b', 'o', 'filled', 'DisplayName', 'start'); 
 end 
 
-function plot_zls(obj, theta)
+function plot_zls(obj, name, theta, color)
     zls = obj.blending.zero_level_set; 
-    name = sprintf("BRS (theta=%.2f, levelset=%.2f)", theta, zls);
+    name = sprintf("BRS %s (theta=%.2f, levelset=%.2f)", name, theta, zls);
     [~, vf_slice] = proj(obj.exp.grid_3d, obj.brs_planner.valueFun, [0 0 1], theta);
-    contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, vf_slice, [zls, zls], 'DisplayName', name, 'color', '#CC1FCB');
+    contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, vf_slice, [zls, zls], 'DisplayName', name, 'color', color);
 end 
 
