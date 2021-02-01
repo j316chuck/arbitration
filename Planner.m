@@ -89,6 +89,8 @@ classdef Planner < handle
             end
             if ~exist(obj.output_folder, 'dir')
                 mkdir(obj.output_folder); 
+                mkdir(sprintf("%s/planners_fig", obj.output_folder));
+                mkdir(sprintf("%s/planners_png", obj.output_folder)); 
             end
             if exp.run_brs
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
@@ -113,10 +115,10 @@ classdef Planner < handle
             if strcmp(exp.environment_type, 'unknown')
                 obj.is_unknown_environment = true;
                 obj.unknown_map = exp.unknown_occ_map; 
-                obj.unknown_map.updateMapAndCost(exp.start);
+                obj.unknown_map.update_map_and_cost(exp.start);
             else
                 obj.is_unknown_environment = false; 
-            end
+            end 
         end
         
         %% Entry point
@@ -169,7 +171,47 @@ classdef Planner < handle
             end
         end 
         
-                
+        %% Resets the robot to a state at the END of a specific mpc plan iteration
+        %  Call this function with a monotonically decreasing mpc plan
+        %  iteration AFTER running your experiment for DEBUGGING purposes.
+        %  Note: the mpc_plan_iteration != obj.cur_timestamp. 
+        %  It only makes sense to reset the robot state if we are planning next timestamp, 
+        %  Thus, obj.cur_timestamp = (mpc_plan_iteration * obj.num_mpc_steps) + 1
+        %  You should be able to call obj.blend_plans() immediately after
+        %  this function and achieve the SAME outputs as obj.blend_plans()
+        %  from the beginning.
+        function reset_state(obj, mpc_plan_iteration)
+            timestamp = mpc_plan_iteration * obj.num_mpc_steps; 
+            if timestamp < 0 || timestamp >= obj.cur_timestamp
+                return; 
+            end 
+            obj.replan_time_counter = obj.blending.replan_dt; % start with replan
+            % begin with a timestamp that is about to replan
+            obj.cur_timestamp = mpc_plan_iteration * obj.num_mpc_steps  + 1;
+            if timestamp ~= 0
+                u = obj.blend_traj(4:5, timestamp)';
+                x = obj.blend_traj(1:3, timestamp+1)'; 
+                obj.state = [x, u];
+            else
+                obj.state = [obj.start(1:4)', 0];
+            end
+            if obj.is_unknown_environment
+                obj.unknown_map.reset_state(timestamp+1); 
+            end
+            if ~isempty(obj.blend_traj)
+                obj.blend_traj = obj.blend_traj(:, 1:timestamp); 
+            end 
+            if ~isempty(obj.switch_traj)
+                obj.switch_traj = obj.switch_traj(:, 1:timestamp); 
+            end 
+            if ~isempty(obj.safety_traj)
+                obj.safety_traj = obj.safety_traj(:, 1:timestamp); 
+            end 
+            if ~isempty(obj.orig_traj)
+                obj.orig_traj = obj.orig_traj(:, 1:timestamp); 
+            end   
+        end 
+        
         %% Update state of robot
         function update_state(obj, x, u, alpha) 
             obj.blend_traj(:, obj.cur_timestamp) = [x, u, alpha]'; % old state and new control
@@ -179,7 +221,7 @@ classdef Planner < handle
             obj.cur_timestamp = obj.cur_timestamp + 1; % increase time stamp
             obj.replan_time_counter = obj.replan_time_counter + obj.dt; % increase replan_time
             if obj.is_unknown_environment
-                obj.unknown_map.updateMapAndCost(nx); 
+                obj.unknown_map.update_map_and_cost(nx); 
             end 
         end 
         
@@ -359,7 +401,7 @@ classdef Planner < handle
                 return 
             end 
             obj.verbose_plot(2);     % plot metrics and robot path
-            obj.plot_unknown_maps(2); % unknown map logging
+            obj.plot_unknown_maps(2); % unknown map debugging
             %obj.plot_spline_cost(2); % spline planner debugging
             obj.mpc_plan_time(end+1) = toc; 
         end 
@@ -497,6 +539,7 @@ classdef Planner < handle
         end     
         
         function save_state(obj)
+            obj.blend_traj(1:3, obj.cur_timestamp) = obj.state(1:3); % update last position
             if obj.reached_goal() 
                 obj.termination_state = 0;
             elseif obj.collided_with_obstacle()
@@ -512,10 +555,11 @@ classdef Planner < handle
         
         %% Plotting functions
         function verbose_plot(obj, threshold)
-            if obj.plot_level >= threshold
-                obj.plot_metrics(); 
-                obj.plot_planners();
+            if obj.plot_level < threshold
+                return;
             end 
+            obj.plot_metrics(); 
+            obj.plot_planners();
         end 
         
         function plot_metrics(obj)
@@ -709,14 +753,16 @@ classdef Planner < handle
             end 
             colorbar;
             if obj.exp.save_plot
-                savefigpath = sprintf("%s/planners_%d.fig", obj.output_folder, obj.cur_timestamp);
+                savefigpath = sprintf("%s/planners_fig/planners_%d.fig", obj.output_folder, obj.cur_timestamp);
                 savefig(savefigpath); 
+                png_path = sprintf("%s/planners_png/planners_%d.png", obj.output_folder, obj.cur_timestamp);
+                saveas(gcf, png_path);
             end 
             hold off;    
         end 
         
         function plot_spline_replan(obj, threshold)
-            if obj.plot_level >= threshold 
+            if obj.plot_level < threshold 
                 return 
             end 
             savefigpath = '';
@@ -727,7 +773,7 @@ classdef Planner < handle
         end 
         
         function plot_unknown_maps(obj, threshold)
-            if obj.plot_level >= threshold 
+            if obj.plot_level < threshold 
                 return 
             end 
             if ~obj.is_unknown_environment
@@ -798,7 +844,7 @@ classdef Planner < handle
         end 
         
         function plot_spline_cost(obj, threshold)
-            if obj.plot_level >= threshold 
+            if obj.plot_level < threshold 
                 return 
             end 
             savefigpath = '';

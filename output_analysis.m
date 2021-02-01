@@ -2,16 +2,16 @@ function output_analysis()
     %% Change these parameters
     verbose = true;
     repo = what("arbitration"); 
-    output_folder = strcat(repo.path, '/results/1_31/');
+    output_folder = strcat(repo.path, '/outputs');
     results_folder = strcat(output_folder, '/results/');
     output_mat_path = sprintf("%s/%s", results_folder, 'output_analysis.mat');
     if ~exist(results_folder, 'dir')
         mkdir(results_folder); 
     end
     control_schemes = {'switch'};
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'replan_safe_traj', 'none', 'sample_safety_control'};
+    blend_schemes = {'time_vary_alpha_open_loop'};
     [starts, goals] = get_point_nav_tasks("sampled"); %"sampled" %"smoke_test"
-    params = get_hyperparam_sets("default"); %"time_vary_open" %"default" %"replan_zls"
+    params = get_hyperparam_sets("time_vary_alpha_open"); %"time_vary_alpha_open" %"default" %"replan_zls"
 
     %% Get metrics
      [metrics, exp_names] = get_metrics(output_folder, ... 

@@ -1,7 +1,7 @@
 function runner(start_pos, end_pos)
     %% Set up experiment parameters
     no_rerun = true; 
-    dry_run = true; 
+    dry_run = false; 
     run_planners = false; 
     blend_schemes = {'time_vary_alpha_open_loop'};    
     control_schemes = {'switch'};   

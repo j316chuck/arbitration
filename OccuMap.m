@@ -17,6 +17,7 @@ classdef OccuMap < handle
         planner_fmm             % 2D grid, negative inside obstacle, positive outside, fmm map of the occupancy_map_planner
         signed_dist_safety      % 3D grid, negative inside obstacle, positive outside, signed distance function of sensed safety environment used by HJIPDE
         signed_dist_planner     % 2D grid, positive inside obstacle, negative outside, signed distance function of planner environment used by spline planner
+        cur_timestamp;      % stores the current timestamp of the occupancy map
         
         sensor_shape;       % (string) camera, circle, or lidar. 
         sensor_radius;      % (float) radius of camera, circle, or lidar scans
@@ -52,6 +53,7 @@ classdef OccuMap < handle
             obj.planner_fmm           = [];
             obj.signed_dist_safety    = [];
             obj.signed_dist_planner   = []; 
+            obj.cur_timestamp         = 1; 
             
             % Sensor args
             obj.sensor_shape = extraArgs.sensor_shape;
@@ -69,7 +71,7 @@ classdef OccuMap < handle
         %% Based on sensing, update occupancy grids and signed distances.
         % Inputs:
         %   robot_pos  [x, y, theta]
-        function updateMapAndCost(obj, robot_pos)
+        function update_map_and_cost(obj, robot_pos)
             % Construct cost function for region outside sensing radius
             % or 'known' environment. +1 sensed, -1 unsensed 
             if strcmp(obj.sensor_shape, 'lidar') || obj.first_compute || strcmp(obj.sensor_shape, 'circle')
@@ -90,10 +92,11 @@ classdef OccuMap < handle
             obj.first_compute = false; 
  
             % Save out the occupancy maps and trajectories for plotting
-            obj.occuMapSafeCellArr{end+1} = obj.occupancy_map_safety;
-            obj.occuMapPlanCellArr{end+1} = obj.occupancy_map_planner;
+            obj.occuMapSafeCellArr{obj.cur_timestamp} = obj.occupancy_map_safety;
+            obj.occuMapPlanCellArr{obj.cur_timestamp} = obj.occupancy_map_planner;
             obj.trajectory = [obj.trajectory, reshape(robot_pos(1:3), [3, 1])]; 
-
+            obj.cur_timestamp = obj.cur_timestamp + 1; 
+            
             % Compute the signed dist maps
             obj.safety_fmm = compute_fmm_map(obj.grid_2d, obj.occupancy_map_safety);
             obj.planner_fmm = compute_fmm_map(obj.grid_2d, obj.occupancy_map_planner); 
@@ -101,6 +104,19 @@ classdef OccuMap < handle
             obj.signed_dist_planner = -obj.planner_fmm .* (obj.occupancy_map_planner < 0);
             %obj.plot_occ_map(); 
         end
+        
+        function reset_state(obj, timestamp)
+            obj.occupancy_map_safety = obj.occuMapSafeCellArr{timestamp}; 
+            obj.occupancy_map_planner = obj.occuMapPlanCellArr{timestamp};
+            obj.occuMapSafeCellArr = obj.occuMapSafeCellArr(1:timestamp);
+            obj.occuMapPlanCellArr = obj.occuMapPlanCellArr(1:timestamp);
+            obj.trajectory = obj.trajectory(1:3, 1:timestamp);
+            obj.cur_timestamp = timestamp;
+            obj.safety_fmm = compute_fmm_map(obj.grid_2d, obj.occupancy_map_safety);
+            obj.planner_fmm = compute_fmm_map(obj.grid_2d, obj.occupancy_map_planner); 
+            obj.signed_dist_safety = repmat(obj.safety_fmm, 1, 1, obj.grid.N(3));
+            obj.signed_dist_planner = -obj.planner_fmm .* (obj.occupancy_map_planner < 0);
+        end 
         
         function plot_occ_map(obj)
             figure(2); 
