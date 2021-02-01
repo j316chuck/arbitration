@@ -13,7 +13,6 @@ end
 function set_quiver_colors(q, probs)
     %// Get the current colormap
     currentColormap = colormap(gca);
-
     %// Now determine the color to make each arrow using a colormap
     [~, ~, ind] = histcounts(probs, size(currentColormap, 1));
 
@@ -21,7 +20,6 @@ function set_quiver_colors(q, probs)
     cmap = uint8(ind2rgb(ind(:), currentColormap) * 255);
     cmap(:,:,4) = 255;
     cmap = permute(repmat(cmap, [1 3 1]), [2 1 3]);
-
     %// We repeat each color 3 times (using 1:3 below) because each arrow has 3 vertices
     set(q.Head, ...
         'ColorBinding', 'interpolated', ...

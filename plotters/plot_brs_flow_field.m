@@ -2,10 +2,10 @@
 repo = what('arbitration');
 params = default_hyperparams(); 
 exp = load_exp(params); 
-% exp.brs_planner.solve_brs_avoid(exp.obstacle)
-% brs_planner = exp.brs_planner; 
-% filename = strcat(repo.path, '/data/brs_planner.mat'); 
-% save(filename, 'brs_planner');
+filename = strcat(repo.path, '/data/brs_planner.mat'); 
+exp.brs_planner.solve_brs_avoid(exp.obstacle)
+brs_planner = exp.brs_planner; 
+save(filename, 'brs_planner');
 
 %% Load BRS planner
 load(filename, 'brs_planner'); 

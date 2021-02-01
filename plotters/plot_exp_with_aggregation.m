@@ -51,13 +51,14 @@ function plot_exp_with_aggregation()
         scatter(obj.start(1), obj.start(2), 75, 'b', 'o', 'filled', 'DisplayName', 'start'); 
         % plot traj
         traj_name = sprintf("%s_robot_trajectory", blend_scheme); 
-        plot_traj_probs(obj.blend_traj(1, :), obj.blend_traj(2, :), obj.blend_traj(3, :), obj.blend_traj(4, :), traj_name); 
+        plot_traj_probs(obj.blend_traj(1, :), obj.blend_traj(2, :), obj.blend_traj(3, :), obj.blend_traj(6, :), traj_name); 
         % plot zls
         zls = obj.blending.zero_level_set; 
         theta = calc_zls_theta(obj.start, obj.goal); 
         brs_name = sprintf("BRS (theta=%.2f, levelset=%.2f)", theta, zls);
         [~, vf_slice] = proj(obj.exp.grid_3d, obj.brs_planner.valueFun, [0 0 1], theta);
         contour(obj.exp.grid_2d.xs{1}, obj.exp.grid_2d.xs{2}, vf_slice, [zls, zls], 'DisplayName', brs_name, 'color', 'green');
+        colorbar;
         % set fig params
         view(0, 90)
         set(gcf, 'color', 'white')
@@ -72,7 +73,6 @@ function plot_exp_with_aggregation()
         unknown_str = get_unknown_str(obj); 
         title_name = sprintf("%s_map_%s_%s_%s", unknown_str, blend_scheme, obj.control_scheme, nav_str); 
         title(title_name, 'Interpreter', 'None');
-        colorbar;
         % save fig
         exp_state = exp_states{obj.termination_state+1}; 
         png_path = sprintf("%s/%s_%s/%s.png", results_folder, ...

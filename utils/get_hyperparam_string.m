@@ -12,9 +12,9 @@ function [hyperparam_str] = get_hyperparam_string(params)
         hyperparam_str = sprintf("num_samples_%.3f_%s", params.num_alpha_samples, base_str);  
     elseif strcmp(params.blend_scheme, 'sample_safety_control')
         hyperparam_str = sprintf("num_samples_%.3f_%s", params.num_alpha_samples, base_str);  
-    elseif strcmp(params.blend_scheme, 'time_vary_alpha_closed_loop_safety_control')
+    elseif strcmp(params.blend_scheme, 'time_vary_alpha_closed_loop')
         hyperparam_str = sprintf("blend_function_%s_%s", params.blend_function_name, base_str); 
-    elseif strcmp(params.blend_scheme, 'time_vary_alpha_open_loop_safety_control')
+    elseif strcmp(params.blend_scheme, 'time_vary_alpha_open_loop')
         hyperparam_str = sprintf("blend_function_%s_%s", params.blend_function_name, base_str); 
     elseif strcmp(params.blend_scheme, 'replan_waypoint')
         hyperparam_str = sprintf("spline_candidates_%.3f_replan_level_set_%.3f_%s", ...

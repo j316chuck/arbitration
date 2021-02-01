@@ -1,13 +1,13 @@
 function runner(start_pos, end_pos)
     %% Set up experiment parameters
     no_rerun = true; 
-    dry_run = false; 
+    dry_run = true; 
     run_planners = false; 
-    blend_schemes = {'replan_safe_traj', 'none', 'sample_safety_control', 'time_vary_alpha_open_loop'};    
+    blend_schemes = {'time_vary_alpha_open_loop'};    
     control_schemes = {'switch'};   
     nav_task_type = "sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
-    hyperparam_set_type = "default"; %"default"; %"replan_zls";  
+    hyperparam_set_type = "time_vary_alpha_open"; %"default"; %"replan_zls";  
     hyperparam_sets = get_hyperparam_sets(hyperparam_set_type); 
     N = length(starts); 
     plot_level = 2; % 1 (at the end), 2 (every replan), 3 (every timestamp)
