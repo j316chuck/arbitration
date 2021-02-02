@@ -41,6 +41,11 @@ function exp = create_map_data(params)
     occ_map = reshape(occ_map, gnum_2d');
     occ_map(occ_map < map_data.free_thresh) = 0;
     occ_map(occ_map >= map_data.free_thresh) = 1; 
+    % Ensure boundaries are all marked 
+    occ_map(1, :) = 0; 
+    occ_map(end, :) = 0;
+    occ_map(:, 1) = 0;
+    occ_map(:, end) = 0; 
     % +1 for free 0 for occupied
     exp.known_occ_map = occ_map; 
     % +1 for free -1 for occupied 

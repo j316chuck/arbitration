@@ -12,6 +12,11 @@ function [starts, goals] = get_point_nav_tasks(type)
         load(path, 'starts', 'goals'); 
         starts = num2cell(starts', 1); 
         goals = num2cell(goals', 1); 
+    elseif strcmp(type, "simple_env")
+        path = strcat(repo.path, '/data/simple_env_sampled_goals.mat'); 
+        load(path, 'starts', 'goals'); 
+        starts = num2cell(starts', 1); 
+        goals = num2cell(goals', 1); 
     else
         warning("No nav task of type %s found", type); 
         return; 

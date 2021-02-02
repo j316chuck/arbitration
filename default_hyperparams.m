@@ -1,13 +1,13 @@
 function [params] = default_hyperparams()
     %% Grid 
-    params.map_basename = 'bookstore';
+    params.map_basename = 'simple_env';
     repo = what('arbitration');
-    params.map_yaml = strcat(repo.path, '/maps/bookstore.yaml');
-    params.map_name = strcat(repo.path, '/maps/bookstore.png');
+    params.map_yaml = strcat(repo.path, '/maps/simple_env.yaml');
+    params.map_name = strcat(repo.path, '/maps/simple_env.png');
     params.gmin_3d = [-10; -10; -pi];
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [51; 51; 16]; %med_large %params.gnum_3d = [41; 41; 16]; % med
-    params.grid_size = "med_large";  
+    params.grid_size = "simple_env_med_large";  
     params.goal_radius = 0.5;
     
     %% DynSys
@@ -24,8 +24,8 @@ function [params] = default_hyperparams()
     %params.start = [1.5; 1.5; pi/2; 0.01]; %[2; 1; pi/2; 0.01]; %[4; 0; pi/2; 0.01]; %[-9;-9;0;0.01]; 
     %params.goal = [-4; 0; pi/2; 0.01]; %[4; 3; pi/2; 0.01]; 
     [s, g] = get_all_smoke_test_cases(); 
-    params.start = [-2; 0; pi/2; 0.01]; %[-0.375; -1.915; pi/2; 0.01];  %s{1}; 
-    params.goal = [-4; 0; pi/2; 0.01]; 
+    params.start = [-5; 0; pi/2; 0.01]; %[-0.375; -1.915; pi/2; 0.01];  %s{1}; 
+    params.goal = [1; 0; pi/2; 0.01]; 
     
     %% Blend Scheme
     %params.blend_scheme = 'time_vary_alpha_open_loop'; 
@@ -58,7 +58,7 @@ function [params] = default_hyperparams()
     params.temperature = 0.2;
     params.num_alpha_samples = 10; 
     params.spline_obs_weight = 1;  
-    params.blend_function_name = "x_2-5"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3", "x_2-5"
+    params.blend_function_name = "x_1-4"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3", "x_2-5"
     params.blend_function = get_alpha_blend_function(params.blend_function_name);
     params.num_mpc_safety_look_ahead = 15; 
     

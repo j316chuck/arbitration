@@ -9,9 +9,9 @@ function output_analysis()
         mkdir(results_folder); 
     end
     control_schemes = {'switch'};
-    blend_schemes = {'time_vary_alpha_open_loop'};
-    [starts, goals] = get_point_nav_tasks("sampled"); %"sampled" %"smoke_test"
-    params = get_hyperparam_sets("time_vary_alpha_open"); %"time_vary_alpha_open" %"default" %"replan_zls"
+    blend_schemes = get_key_blend_schemes(); 
+    [starts, goals] = get_point_nav_tasks("simple_env"); %"sampled" %"smoke_test"
+    params = get_hyperparam_sets("default"); %"time_vary_alpha_open" %"default" %"replan_zls"
 
     %% Get metrics
      [metrics, exp_names] = get_metrics(output_folder, ... 

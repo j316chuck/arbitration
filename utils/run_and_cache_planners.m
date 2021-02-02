@@ -1,6 +1,5 @@
-function run_and_cache_planners(N, starts, goals)
+function run_and_cache_planners(starts, goals)
     for i = 1:length(starts)
-        if i > N; break; end
         params = default_hyperparams(); 
         params.start = starts{i};
         params.goal = goals{i};

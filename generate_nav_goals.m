@@ -1,15 +1,15 @@
-function [starts, goals] = generate_nav_goals(N, min_dist, regen_points, seed_num)
+function [starts, goals] = generate_nav_goals(name, N, min_dist, regen_points, seed_num)
     %% Generate points
     rng(seed_num);
     if regen_points
         p = default_hyperparams();
         exp = load_exp(p); 
-        generate_nav_points(exp);
+        generate_nav_points(exp, name);
     end 
     
     %% Sample Goals and Starts
     repo = what('arbitration');
-    filename = strcat(repo.path, '/data/valid_sampled_points.mat');
+    filename = strcat(repo.path, sprintf('/data/%s_sampled_points.mat', name));
     load(filename, 'sampled_points');
     xs = sampled_points(1, :);
     ys = sampled_points(2, :);
@@ -56,12 +56,12 @@ function [starts, goals] = generate_nav_goals(N, min_dist, regen_points, seed_nu
     ylabel('y (meters)');
     legend('Location', 'NorthWest');
     title('Sampled Goals');
-    savefig(strcat(repo.path,'/data/valid_sampled_goals.fig'));
-    save(strcat(repo.path,'/data/valid_sampled_goals.mat'), 'starts', 'goals');
+    savefig(strcat(repo.path, sprintf('/data/%s_sampled_goals.fig', name)));
+    save(strcat(repo.path, sprintf('/data/%s_sampled_goals.mat', name)), 'starts', 'goals');
     hold off
 end 
 
-function [sampled_points] = generate_nav_points(exp)
+function [sampled_points] = generate_nav_points(exp, name)
     %% sample points
     N = 1000;
     obstacle_threshold = 0.99; % intuitively it's 0 but practically it's 0.99
@@ -102,8 +102,8 @@ function [sampled_points] = generate_nav_points(exp)
     legend('Location', 'NorthWest');
     title('Sampled Points'); 
     repo = what('arbitration');
-    save(strcat(repo.path,'/data/valid_sampled_points.mat'), 'sampled_points');
-    savefig(strcat(repo.path,'/data/valid_sampled_points.fig'));
+    save(strcat(repo.path, sprintf('/data/%s_sampled_points.mat', name)), 'sampled_points');
+    savefig(strcat(repo.path, sprintf('/data/%s_sampled_points.fig', name)));
     hold off;
 end 
 

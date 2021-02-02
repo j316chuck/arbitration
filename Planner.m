@@ -281,8 +281,8 @@ classdef Planner < handle
                 plan{1}, plan{2}, safety_plan(1, :), safety_plan(2, :), obj.brs_planner, obj.blending.blend_function);
             next_plan = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; new_alphas'];  
             % ========== DEBUGGING! =========== %                          
-            % obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
-            %    safety_plan(1, :), safety_plan(2, :), new_plan, new_alphas);
+            %obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
+            %   safety_plan(1, :), safety_plan(2, :), new_plan, new_alphas);
             obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_plan]; 
         end 
         
@@ -401,7 +401,8 @@ classdef Planner < handle
                 return 
             end 
             obj.verbose_plot(2);     % plot metrics and robot path
-            obj.plot_unknown_maps(2); % unknown map debugging
+            %obj.plot_unknown_maps(2); % unknown map debugging
+            %obj.plot_spline_replan(2); % spline replan debugging
             %obj.plot_spline_cost(2); % spline planner debugging
             obj.mpc_plan_time(end+1) = toc; 
         end 
