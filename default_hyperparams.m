@@ -35,7 +35,8 @@ function [params] = default_hyperparams()
     %params.blend_scheme = 'sample_safety_value'; 
     %params.blend_scheme = 'sample_safety_control'; 
     %params.blend_scheme = 'replan_waypoint';  
-    params.blend_scheme = 'none';
+    %params.blend_scheme = 'none';
+    params.blend_scheme = 'time_vary_k';
     %params.blend_scheme = 'replan_safe_traj';
 
     %% Control Scheme
@@ -50,15 +51,16 @@ function [params] = default_hyperparams()
     params.sensorArgs.sensor_radius = 2;
 
     %% Blending Scheme
-    params.replan_dt = 0.5;
+    params.replan_dt = 1.5;
     params.zero_level_set = 0.15;
     params.replan_level_set = 0.3; 
     params.replan_spline_max_num_candidates = 10; 
+    params.k_step_safety_compare = 10; 
     params.alpha = 0.8;
     params.temperature = 0.2;
     params.num_alpha_samples = 10; 
     params.spline_obs_weight = 1;  
-    params.blend_function_name = "x_2-5"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3", "x_2-5"
+    params.blend_function_name = "x_1-2"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3", "x_2-5"
     params.blend_function = get_alpha_blend_function(params.blend_function_name);
     params.num_mpc_safety_look_ahead = 15; 
     

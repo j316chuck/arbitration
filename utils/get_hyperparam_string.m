@@ -22,6 +22,9 @@ function [hyperparam_str] = get_hyperparam_string(params)
     elseif strcmp(params.blend_scheme, 'replan_safe_traj')
         hyperparam_str = sprintf("num_mpc_safety_look_ahead_%.2f_%s", ... 
             params.num_mpc_safety_look_ahead, base_str); 
+    elseif strcmp(params.blend_scheme, 'time_vary_k')
+        hyperparam_str = sprintf("blend_function_%s_time_vary_look_ahead_%d_%s", ... 
+            params.blend_function_name, params.k_step_safety_compare, base_str); 
     else 
         hyperparam_str = base_str; 
         warning("blending scheme not supported");  

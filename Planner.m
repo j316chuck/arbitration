@@ -357,6 +357,16 @@ classdef Planner < handle
                 obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), new_plan]; 
             end 
         end 
+                
+        function replan_time_vary_k(obj, plan, safety_plan)
+            [new_plan, new_alphas] = obj.spline_planner.open_loop_replan_with_value_blending(obj.state, ...
+                plan{1}, plan{2}, safety_plan(1, :), safety_plan(2, :), obj.brs_planner, obj.blending.blend_function);
+            next_plan = [new_plan{1}; new_plan{2}; new_plan{3}; new_plan{4}; new_plan{5}; new_alphas'];  
+            % ========== DEBUGGING! =========== %                          
+            %obj.plot_safety_score_blended_traj(plan{1}, plan{2}, ... 
+            %   safety_plan(1, :), safety_plan(2, :), new_plan, new_alphas);
+            obj.blend_traj = [obj.blend_traj(:, 1:obj.cur_timestamp-1), next_plan]; 
+        end 
         
         %% Plan high level mpc plan for obj.horizon time to be taken for obj.num_mpc_steps iterations
         function plan_mpc_controls(obj)
@@ -396,6 +406,8 @@ classdef Planner < handle
                 obj.replan_waypoint(plan); 
             elseif strcmp(obj.blend_scheme, 'replan_safe_traj')
                 obj.replan_safe_traj(orig_plan); 
+            elseif strcmp(obj.blend_scheme, 'time_vary_k')
+                obj.replan_time_vary_k(plan, safety_plan); 
             else 
                 warning("blending scheme not supported"); 
                 return 
@@ -429,7 +441,6 @@ classdef Planner < handle
         function is_max_timestamps = reached_max_timestamps(obj)
             is_max_timestamps = (obj.cur_timestamp >= obj.max_num_planning_pts);
         end 
-        
                 
         function mpc_plan = get_mpc_plan(obj, plan)
             mpc_plan = [plan{1}(1:obj.num_mpc_steps); ...
@@ -525,18 +536,32 @@ classdef Planner < handle
         end 
         
         function safety_plan = get_next_safety_plan(obj)
-            obj.dynSys.x = obj.state(1:3); % get current state
-            safety_plan = zeros(6, 0);
-            safety_state = obj.state; 
-            alpha = 0; 
-            for i = 1:obj.num_waypts
-              x = reshape(safety_state(1:3), [1, 3]);
-              u = obj.brs_planner.get_avoid_u(x)';
-              obj.dynSys.updateState(u, obj.dt, x'); 
-              safety_plan(:, i) = [x, u, alpha]; %old state new control
-              safety_state = [obj.dynSys.x', u]; % new state and new control
-            end 
-            obj.dynSys.x = obj.state(1:3); % restore current state
+            if strcmp(obj.blend_scheme, 'time_vary_k')
+                safety_plan = zeros(6, 0);
+                for i = 1:obj.num_waypts
+                    safety_index = max(i - obj.blending.k_step_safety_compare + 1, 1);
+                    start_index = obj.cur_timestamp + safety_index - 1;
+                    x = reshape(obj.orig_traj(1:3, start_index), [1, 3]);
+                    num_steps_forward = min(i, obj.blending.k_step_safety_compare) - 1; 
+                    for j = 1:num_steps_forward
+                        x = reshape(obj.brs_planner.use_avoid_control(x), [1, 3]); 
+                    end 
+                    safety_plan(:, i) = [x, 0, 0, 0]; %old state new control
+                end 
+            else 
+                obj.dynSys.x = obj.state(1:3); % get current state
+                safety_plan = zeros(6, 0);
+                safety_state = obj.state; 
+                alpha = 0; 
+                for i = 1:obj.num_waypts
+                  x = reshape(safety_state(1:3), [1, 3]);
+                  u = obj.brs_planner.get_avoid_u(x)';
+                  obj.dynSys.updateState(u, obj.dt, x'); 
+                  safety_plan(:, i) = [x, u, alpha]; %old state new control
+                  safety_state = [obj.dynSys.x', u]; % new state and new control
+                end
+                obj.dynSys.x = obj.state(1:3); % restore current state
+            end
         end     
         
         function save_state(obj)

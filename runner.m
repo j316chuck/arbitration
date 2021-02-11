@@ -3,9 +3,9 @@ function runner(start_pos, end_pos)
     dry_run = false; 
     no_rerun = true; 
     run_planners = false; 
-    blend_schemes = get_key_blend_schemes();   
+    blend_schemes = {'time_vary_k'};   
     control_schemes = {'switch'};   
-    nav_task_type = "simple_env"; %"sampled"; %"smoke";  
+    nav_task_type = "sampled"; %"sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     hyperparam_set_type = "default"; %"time_vary_alpha_open"; %"default"; %"replan_zls";  
     hyperparam_sets = get_hyperparam_sets(hyperparam_set_type); 

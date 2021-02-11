@@ -78,6 +78,7 @@ function [exp] = load_exp(params)
     exp.blending.blend_function_name = params.blend_function_name;
     exp.blending.blend_function = params.blend_function;
     exp.blending.num_mpc_safety_look_ahead = params.num_mpc_safety_look_ahead; 
+    exp.blending.k_step_safety_compare = params.k_step_safety_compare; 
    
     %% Experiment Params
     exp.hyperparam_str = get_hyperparam_string(params);
