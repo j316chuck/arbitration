@@ -9,7 +9,7 @@ function [starts, goals] = generate_nav_goals(name, N, min_dist, regen_points, s
     
     %% Sample Goals and Starts
     repo = what('arbitration');
-    filename = strcat(repo.path, sprintf('/data/%s_sampled_points.mat', name));
+    filename = strcat(repo.path, sprintf('/maps/%s_sampled_points.mat', name));
     load(filename, 'sampled_points');
     xs = sampled_points(1, :);
     ys = sampled_points(2, :);
@@ -56,8 +56,8 @@ function [starts, goals] = generate_nav_goals(name, N, min_dist, regen_points, s
     ylabel('y (meters)');
     legend('Location', 'NorthWest');
     title('Sampled Goals');
-    savefig(strcat(repo.path, sprintf('/data/%s_sampled_goals.fig', name)));
-    save(strcat(repo.path, sprintf('/data/%s_sampled_goals.mat', name)), 'starts', 'goals');
+    savefig(strcat(repo.path, sprintf('/maps/%s_sampled_goals.fig', name)));
+    save(strcat(repo.path, sprintf('/maps/%s_sampled_goals.mat', name)), 'starts', 'goals');
     hold off
 end 
 
@@ -102,8 +102,8 @@ function [sampled_points] = generate_nav_points(exp, name)
     legend('Location', 'NorthWest');
     title('Sampled Points'); 
     repo = what('arbitration');
-    save(strcat(repo.path, sprintf('/data/%s_sampled_points.mat', name)), 'sampled_points');
-    savefig(strcat(repo.path, sprintf('/data/%s_sampled_points.fig', name)));
+    save(strcat(repo.path, sprintf('/maps/%s_sampled_points.mat', name)), 'sampled_points');
+    savefig(strcat(repo.path, sprintf('/maps/%s_sampled_points.fig', name)));
     hold off;
 end 
 

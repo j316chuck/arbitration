@@ -1,13 +1,13 @@
 function [params] = default_hyperparams()
     %% Grid 
-    params.map_basename = 'simple_env';
+    params.map_basename = 'bookstore';
     repo = what('arbitration');
-    params.map_yaml = strcat(repo.path, '/maps/simple_env.yaml');
-    params.map_name = strcat(repo.path, '/maps/simple_env.png');
+    params.map_yaml = strcat(repo.path, '/maps/bookstore.yaml');
+    params.map_name = strcat(repo.path, '/maps/bookstore.png');
     params.gmin_3d = [-10; -10; -pi];
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [51; 51; 16]; %med_large %params.gnum_3d = [41; 41; 16]; % med
-    params.grid_size = "simple_env_med_large";  
+    params.grid_size = "med_large";  
     params.goal_radius = 0.5;
     
     %% DynSys
@@ -45,12 +45,12 @@ function [params] = default_hyperparams()
     %params.control_scheme = 'distance';  
     
     %% Environment Scheme
-    params.environment_type = 'unknown'; % 'known' 
+    params.environment_type = 'known'; % 'known' 
     params.sensorArgs.sensor_shape = 'lidar'; %'camera'
     params.sensorArgs.sensor_radius = 2;
 
     %% Blending Scheme
-    params.replan_dt = 1.5;
+    params.replan_dt = 0.5;
     params.zero_level_set = 0.15;
     params.replan_level_set = 0.3; 
     params.replan_spline_max_num_candidates = 10; 
@@ -58,7 +58,7 @@ function [params] = default_hyperparams()
     params.temperature = 0.2;
     params.num_alpha_samples = 10; 
     params.spline_obs_weight = 1;  
-    params.blend_function_name = "x_1-4"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3", "x_2-5"
+    params.blend_function_name = "x_2-5"; %"x", "exp_2x", "exp_x", "exp_0.5x", "x2", "x3", "x_2-5"
     params.blend_function = get_alpha_blend_function(params.blend_function_name);
     params.num_mpc_safety_look_ahead = 15; 
     

@@ -1,15 +1,11 @@
 function plot_exp_with_aggregation()
     %% Change these parameters
-    output_name = "/results/1_31"; 
+    output_name = "/results/1_25_all_exps_backup/"; 
     control_schemes = {'switch'}; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'}; %get_key_blend_schemes()
-    labels = {'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; %get_new_alpha_blend_function_names(); 
+    blend_schemes = {'time_vary_alpha_open_loop', 'sample_safety_control', 'replan_safe_traj', 'none'}; %get_key_blend_schemes()
     hyperparam_str = "default"; 
     hyperparam_sets = get_hyperparam_sets(hyperparam_str); %replan_zls %time_vary_alpha_open"
-    Nh = length(hyperparam_sets); 
-    Nc = length(control_schemes); 
     Nb = length(blend_schemes); 
-    plot_hyperparam = false; 
 
     %% Extract and Make Data Paths
     repo = what("arbitration"); 

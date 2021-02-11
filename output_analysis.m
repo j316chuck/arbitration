@@ -2,7 +2,7 @@ function output_analysis()
     %% Change these parameters
     verbose = true;
     repo = what("arbitration"); 
-    output_folder = strcat(repo.path, '/outputs');
+    output_folder = strcat(repo.path, '/results/1_25_all_exps_backup');
     results_folder = strcat(output_folder, '/results/');
     output_mat_path = sprintf("%s/%s", results_folder, 'output_analysis.mat');
     if ~exist(results_folder, 'dir')
@@ -10,7 +10,7 @@ function output_analysis()
     end
     control_schemes = {'switch'};
     blend_schemes = get_key_blend_schemes(); 
-    [starts, goals] = get_point_nav_tasks("simple_env"); %"sampled" %"smoke_test"
+    [starts, goals] = get_point_nav_tasks("sampled"); %"simple_env" %"sampled" %"smoke_test"
     params = get_hyperparam_sets("default"); %"time_vary_alpha_open" %"default" %"replan_zls"
 
     %% Get metrics

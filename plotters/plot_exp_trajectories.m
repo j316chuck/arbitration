@@ -3,11 +3,11 @@ function plot_exp_trajectories(index)
         index = 1;
     end
     %% Change these parameters
-    output_name = "/results/1_31"; 
-    nav_task_type = "sampled"; %"smoke";  
+    output_name = "/results/1_25_all_exps_backup"; 
+    nav_task_type = "sampled"; %"simple_env"; %"sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     control_schemes = {'switch'}; 
-    blend_schemes = {'time_vary_alpha_open_loop_safety_control', 'sample_safety_control', 'replan_safe_traj', 'none'}; %get_key_blend_schemes()
+    blend_schemes = {'time_vary_alpha_open_loop', 'sample_safety_control', 'replan_safe_traj', 'none'}; %get_key_blend_schemes()
     labels = {'value alpha (open)', 'sample alpha (static)', 'mo and karen', 'cdc'}; %get_new_alpha_blend_function_names(); 
     colors = get_all_blend_scheme_colors();
     hyperparam_str = "default"; 
@@ -17,9 +17,9 @@ function plot_exp_trajectories(index)
     Nb = length(blend_schemes); 
     start = starts{index};  
     goal = goals{index};
-    title_str = "unknown_key_alpha_blending_schemes_switch_control"; 
+    title_str = "known_key_alpha_blending_schemes_switch_control"; 
     plot_hyperparam = false; 
-    plot_all_zls = true;
+    plot_all_zls = false;
 
     %% Extract Data Paths
     repo = what("arbitration"); 
@@ -79,9 +79,7 @@ function plot_exp_trajectories(index)
                     end
                     if plot_all_zls
                         plot_zls(obj, legend_name, zls_theta, color); 
-                    else 
-                        plot_zls(obj, 'bookstore', zls_theta, '#CC1FCB'); 
-                    end
+                    end 
                     plot_traj(obj.blend_traj, legend_name, color); 
                     set_plot_params(plot_name);
                     exp_ran = true; 
