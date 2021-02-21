@@ -42,21 +42,21 @@ Repo for testing different arbitration policies with a 3D Dubins car dynamical s
 ## Problem Statement
 Our task is the point navigation problem in robotics where a robot is given a start position, an end goal, and a set of obstacles in a binary occupancy grid. The robot must plan a goal reaching trajectory from the start location to the end goal which does not collide with any obstacles. We tested the robot in two types of environments: known and unknown. <br> <br>
 In the known environment, the robot knows all the obstacles a-priori. In the unknown environment, the robot knows all obstacles within a 2 meter lidar sensing region. We let x denote the 3D position (x, y, theta) of the robot at a specific point in time. We choose the model predictive control framework for our planning algorithms. At each planning iteration we evaluate:  
-- $V(x)$ the safety value function for the HJIPDE equations
-- $x_{safety}$ the safety trajectory for the next N horizon time stamps
-- $x_{spline}$ the spline trajectory for the next N horizon time stamps 
-- $cost(x)$ the spline planner cost function used to find the optimal spline plan
+- V(x) the safety value function for the HJIPDE equations
+- x_safety the safety trajectory for the next N horizon time stamps
+- x_spline the spline trajectory for the next N horizon time stamps 
+- cost(x) the spline planner cost function used to find the optimal spline plan
 
 Our algorithms investigate different arbitration policies that aim to blend these two planner trajectories safely and efficiently. Safety is defined by the robot not crashing into any obstacles. Efficiency is defined by the robot maintaining goal reaching and low jerk controls. 
 
 ## Policies
 Name | Formulation | Algorithm Description
 ------------ | ------------- | ----------
-[CDC Baseline](https://arxiv.org/abs/1905.00532) | $\text{if } V(x) < 0: x_{safety}$ $\text{ else: } x_{spline}$ | Robot goes wherever the spline planner desires until it enters an unsafe state in which the robot switches to a safety controller. 
-[Mo and Karen Baseline](http://asl.stanford.edu/wp-content/papercite-data/pdf/Leung.Schmerling.Chen.ea.ISER18.pdf) | $\min cost(x_{spline}) \text{ s.t. } V(x) > \text{0 }$ | Find the best spline trajectory that does not enter an unsafe state within your spline mpc optimization procedure. (Constrained Optimization)
-Constant Alpha | $\min\limits_x \alpha \|\| x - x_{spline} \|\|^2_2 + (1 - \alpha)\|\| x - x_{safety} \|\|^2_2$  | Blend the two trajectories with a constant alpha (Unconstrained Optimization)
-Sampled Alpha | $\max\limits_{\alpha}\min\limits_x \alpha \|\| x - x_{spline} \|\|^2_2 + (1 - \alpha)\|\| x - x_{safety} \|\|^2_2$ <br> $\text{s.t. } V(x) > 0$ |Sample alphas from $[1 - 0]$ in a decreasing order until we find an alpha blended trajectory that doesn't go into an unsafe state. 
-Time Vary Alpha | $\min\limits_x \alpha\|\| x - x_{spline} \|\|^2_2 + (1 - \alpha)\|\| x - x_{safety} \|\|^2_2$ <br> $\text{ s.t. } \alpha = V(x)$ | Blend the two trajectories with a time varying alpha that depends on the safety value V(x). 
+[CDC Baseline](https://arxiv.org/abs/1905.00532) | ![cdc formulation](/docs/cdc.png) | Robot goes wherever the spline planner desires until it enters an unsafe state in which the robot switches to a safety controller. 
+[Mo and Karen Baseline](http://asl.stanford.edu/wp-content/papercite-data/pdf/Leung.Schmerling.Chen.ea.ISER18.pdf) | ![mo and karen formulation](/docs/mo_karen.png) | Find the best spline trajectory that does not enter an unsafe state within your spline mpc optimization procedure. (Constrained Optimization)
+Constant Alpha | ![cpnstant alpha formulation](/docs/constant_alpha.png)  | Blend the two trajectories with a constant alpha (Unconstrained Optimization)
+Sampled Alpha | ![sampled alpha formulation](/docs/sample_alpha.png) |Sample alphas from 1 - 0 in a decreasing order until we find an alpha blended trajectory that doesn't go into an unsafe state. 
+Time Vary Alpha | ![time vary alpha formulation](/docs/time_vary_alpha.png) | Blend the two trajectories with a time varying alpha that depends on the safety value V(x). 
 Reach Avoid | None | Optimal goal reaching trajectory obtained from solving the reach avoid formulation of the HJIPDE equations
 
 
@@ -79,5 +79,4 @@ Map | Environment Type | Results
 ## Main Results
 - In a completely known environment, the constrained optimization formulation (e.g. Mo and Karen's paper) performs best empirically. Intuitively this makes sense, as if one knows the obstacles then we should plan around them by treating them as constraints in our optimization procedure. 
 - In an unknown environment, the sampled alpha formulation performs best empirically. 
-
 
