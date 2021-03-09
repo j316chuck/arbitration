@@ -1,9 +1,9 @@
 function [params] = default_hyperparams()
     %% Grid 
-    params.map_basename = 'bookstore';
+    params.map_basename = 'simple_env'; 
     repo = what('arbitration');
-    params.map_yaml = strcat(repo.path, '/maps/bookstore.yaml');
-    params.map_name = strcat(repo.path, '/maps/bookstore.png');
+    params.map_yaml = strcat(repo.path, '/maps/simple_env.yaml');
+    params.map_name = strcat(repo.path, '/maps/simple_env.png');
     params.gmin_3d = [-10; -10; -pi];
     params.gmax_3d = [5.4; 5.4; pi];
     params.gnum_3d = [51; 51; 16]; %med_large %params.gnum_3d = [41; 41; 16]; % med
@@ -13,7 +13,7 @@ function [params] = default_hyperparams()
     %% DynSys
     params.wMax = 1;
     params.vRange = [0.1, 1.0];
-    params.dMax = [0.1, 0.1];
+    params.dMax = [0.1, 0.1, 0.05];
     params.tau = 0:0.5:30;
     
     %% Spline Planner
@@ -37,6 +37,9 @@ function [params] = default_hyperparams()
     %params.blend_scheme = 'replan_waypoint';  
     params.blend_scheme = 'none';
     %params.blend_scheme = 'replan_safe_traj';
+    
+    %% Update Method
+    params.updateMethod = 'HJIPDE'; 
 
     %% Control Scheme
     params.control_scheme = 'switch'; 
@@ -45,12 +48,12 @@ function [params] = default_hyperparams()
     %params.control_scheme = 'distance';  
     
     %% Environment Scheme
-    params.environment_type = 'known'; % 'known' 
+    params.environment_type = 'unknown'; % 'known' 
     params.sensorArgs.sensor_shape = 'lidar'; %'camera'
     params.sensorArgs.sensor_radius = 2;
 
     %% Blending Scheme
-    params.replan_dt = 0.5;
+    params.replan_dt = 1.5;
     params.zero_level_set = 0.15;
     params.replan_level_set = 0.3; 
     params.replan_spline_max_num_candidates = 10; 

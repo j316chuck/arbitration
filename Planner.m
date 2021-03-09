@@ -44,6 +44,7 @@ classdef Planner < handle
         start_time
         total_exp_time
         mpc_plan_time
+        hjipde_time
     end
     
     methods
@@ -79,6 +80,7 @@ classdef Planner < handle
             obj.start_time = tic; 
             obj.total_exp_time = zeros(obj.max_num_planning_pts, 1); 
             obj.mpc_plan_time = []; 
+            obj.hjipde_time = [];
             % Logging information
             repo = what('arbitration');
             obj.exp_name = exp.exp_name; 
@@ -105,10 +107,10 @@ classdef Planner < handle
             if exp.run_planner
                 obj.reach_avoid_planner.solve_reach_avoid(exp.start(1:3), exp.goal(1:3), exp.goal_map_3d, exp.obstacle, exp.dt);
                 reach_avoid_planner = obj.reach_avoid_planner;
-                filename = sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, exp.point_nav_str); 
+                filename = sprintf("%s/data/%s_%s/%s.mat", repo.path, exp.map_basename, exp.grid_size, exp.point_nav_str); 
                 save(filename, 'reach_avoid_planner'); 
             else
-                filename =  sprintf("%s/data/%s/%s.mat", repo.path, exp.grid_size, exp.point_nav_str); 
+                filename =  sprintf("%s/data/%s_%s/%s.mat", repo.path, exp.map_basename, exp.grid_size, exp.point_nav_str); 
                 load(filename, 'reach_avoid_planner');
                 obj.reach_avoid_planner = reach_avoid_planner;
             end 
@@ -360,12 +362,14 @@ classdef Planner < handle
         
         %% Plan high level mpc plan for obj.horizon time to be taken for obj.num_mpc_steps iterations
         function plan_mpc_controls(obj)
-            tic
+            t_mpc_start = tic;
             if obj.is_unknown_environment
-                spline_obs_map = obj.unknown_map.signed_dist_planner; 
+                spline_obs_map = obj.unknown_map.signed_dist_planner;
                 obj.spline_planner.set_sd_obs(spline_obs_map); 
                 safety_map = obj.unknown_map.signed_dist_safety; 
+                tic 
                 obj.brs_planner.solve_brs_avoid(safety_map); 
+                obj.hjipde_time(end+1) = toc; 
             end 
             obj.replan_time_counter = 0;
             obj.use_safety_control = false; 
@@ -404,7 +408,7 @@ classdef Planner < handle
             %obj.plot_unknown_maps(2); % unknown map debugging
             %obj.plot_spline_replan(2); % spline replan debugging
             %obj.plot_spline_cost(2); % spline planner debugging
-            obj.mpc_plan_time(end+1) = toc; 
+            obj.mpc_plan_time(end+1) = toc(t_mpc_start); 
         end 
         
         %% Helper Functions

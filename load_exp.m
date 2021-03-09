@@ -48,11 +48,16 @@ function [exp] = load_exp(params)
     avoidBrsSchemeData.grid = exp.grid_3d;
     avoidBrsSchemeData.uMode = 'max';
     avoidBrsSchemeData.dMode = 'min';
-    exp.updateMethod = 'HJI'; 
+    avoidBrsSchemeData.accuracy = 'high'; 
+    if strcmp(params.updateMethod, 'local_q')
+        avoidBrsSchemeData.hamFunc = @dubins3Dham_localQ;
+        avoidBrsSchemeData.partialFunc = @dubins3Dpartial_localQ;
+    end   
+    exp.updateMethod = params.updateMethod; 
     exp.avoidBrsSchemeData = avoidBrsSchemeData; 
     tau = 0:exp.dt:10; 
-    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, tau, exp.dt); 
-         
+    exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, tau, exp.dt, exp.updateMethod); 
+
     %% Spline Planner
     xstart = exp.start(1:3);
     wMax = exp.wMax; 

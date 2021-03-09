@@ -6,7 +6,7 @@
 xstart = [100; 75; 220*pi/180];
 wMax = 1;
 vrange = [0.5, 1.0];
-dMax = [0.3; 0.3];
+dMax = [0.3; 0.3; 0.1];
 pl = Plane(xstart, wMax, vrange, dMax);
 
 
@@ -21,13 +21,18 @@ obs2 = shapeCylinder(g, 3, xe, 10);
 dt = 0.1;
 tau = 0:dt:10;
 
+updateMethod = 'local_q';
 schemeData.dynSys = pl;
 schemeData.grid = g;
 schemeData.uMode = 'max';
 schemeData.dMode = 'min';
-updateMethod = 'HJI'; 
+schemeData.accuracy = 'high'; 
+if strcmp(updateMethod, 'local_q')
+    schemeData.hamFunc = @dubins3Dham_localQ;
+    schemeData.partialFunc = @dubins3Dpartial_localQ;
+end 
 
-planner = BRSAvoidPlanner(g, schemeData, tau, 0.5);
+planner = BRSAvoidPlanner(g, schemeData, tau, 0.5, updateMethod);
             
 %% Plan!
 % note: need a non-zero starting velocity to avoid singularities in spline

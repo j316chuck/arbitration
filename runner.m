@@ -3,11 +3,11 @@ function runner(start_pos, end_pos)
     dry_run = false; 
     no_rerun = true; 
     run_planners = false; 
-    blend_schemes = get_key_blend_schemes();   
+    blend_schemes = {'none'};   
     control_schemes = {'switch'};   
     nav_task_type = "simple_env"; %"sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
-    hyperparam_set_type = "default"; %"time_vary_alpha_open"; %"default"; %"replan_zls";  
+    hyperparam_set_type = "HJIPDE_update_methods"; %"time_vary_alpha_open"; %"default"; %"replan_zls"; %"HJIPDE_update_methods"
     hyperparam_sets = get_hyperparam_sets(hyperparam_set_type); 
     plot_level = 2; % 1 (at the end), 2 (every replan), 3 (every timestamp)
     
