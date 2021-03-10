@@ -97,10 +97,10 @@ classdef Planner < handle
             if exp.run_brs
                 obj.brs_planner.solve_brs_avoid(exp.obstacle);
                 brs_planner = obj.brs_planner;
-                filename = sprintf("%s/data/%s/brs_planner.mat", repo.path, exp.grid_size); 
+                filename = sprintf("%s/data/%s_%s/brs_planner.mat", repo.path, exp.map_basename, exp.grid_size); 
                 save(filename, 'brs_planner'); 
             else
-                filename = sprintf("%s/data/%s/brs_planner.mat", repo.path, exp.grid_size); 
+                filename = sprintf("%s/data/%s_%s/brs_planner.mat", repo.path, exp.map_basename, exp.grid_size); 
                 load(filename, 'brs_planner'); 
                 obj.brs_planner = brs_planner;
             end 

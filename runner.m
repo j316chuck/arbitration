@@ -2,7 +2,7 @@ function runner(start_pos, end_pos)
     %% Set up experiment parameters
     dry_run = false; 
     no_rerun = true; 
-    run_planners = false; 
+    run_planners = true; 
     blend_schemes = {'none'};   
     control_schemes = {'switch'};   
     nav_task_type = "simple_env"; %"sampled"; %"smoke";  

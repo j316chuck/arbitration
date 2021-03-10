@@ -1,13 +1,13 @@
 function [params] = default_hyperparams()
     %% Grid 
-    params.map_basename = 'simple_env'; 
+    params.map_basename = 'bookstore'; 
     repo = what('arbitration');
-    params.map_yaml = strcat(repo.path, '/maps/simple_env.yaml');
-    params.map_name = strcat(repo.path, '/maps/simple_env.png');
+    params.map_yaml = strcat(repo.path, '/maps/bookstore.yaml');
+    params.map_name = strcat(repo.path, '/maps/bookstore.png');
     params.gmin_3d = [-10; -10; -pi];
     params.gmax_3d = [5.4; 5.4; pi];
-    params.gnum_3d = [51; 51; 16]; %med_large %params.gnum_3d = [41; 41; 16]; % med
-    params.grid_size = "med_large";  
+    params.gnum_3d = [31; 31; 21]; %[51; 51; 16]; %med_large %params.gnum_3d = [41; 41; 16]; % med
+    params.grid_size = "small";  
     params.goal_radius = 0.5;
     
     %% DynSys
