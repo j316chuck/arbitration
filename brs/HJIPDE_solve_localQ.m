@@ -223,6 +223,72 @@ if isfield(extraArgs,'stopSetInclude') || isfield(extraArgs,'stopSetIntersect')
     end
 end
 
+if isfield(extraArgs, 'visualize')
+    
+    if isfield(extraArgs, 'RS_level')
+        extraArgs.visualize.sliceLevel = extraArgs.RS_level;
+        extraArgs = rmfield(extraArgs, 'RS_level');
+        warning(['we now use extraArgs.visualize.sliceLevel instead of'...
+            'extraArgs.RS_level']);
+    end
+    
+    if isfield(extraArgs, 'plotData')
+        extraArgs.visualize.plotData = extraArgs.plotData;
+        extraArgs = rmfield(extraArgs, 'plotData');
+        warning(['we now use extraArgs.visualize.plotData instead of'...
+            'extraArgs.plotData']);
+    end
+    
+    if isfield(extraArgs, 'deleteLastPlot')
+        extraArgs.visualize.deleteLastPlot = extraArgs.deleteLastPlot;
+        extraArgs = rmfield(extraArgs, 'deleteLastPlot');
+        warning(['we now use extraArgs.visualize.deleteLastPlot instead'...
+            'of extraArgs.deleteLastPlot']);
+    end
+    
+    if isfield(extraArgs, 'fig_num')
+        extraArgs.visualize.figNum = extraArgs.fig_num;
+        extraArgs = rmfield(extraArgs, 'fig_num');
+        warning(['we now use extraArgs.visualize.figNum instead'...
+            'of extraArgs.fig_num']);
+    end
+    
+    if isfield(extraArgs, 'fig_filename')
+        extraArgs.visualize.figFilename = extraArgs.fig_filename;
+        extraArgs = rmfield(extraArgs, 'fig_filename');
+        warning(['we now use extraArgs.visualize.figFilename instead'...
+            'of extraArgs.fig_filename']);
+    end
+    
+    if isfield(extraArgs, 'target')
+        warning(['you wrote extraArgs.target instead of' ...
+            'extraArgs.targetFunction'])
+        extraArgs.targetFunction = extraArgs.target;
+        extraArgs = rmfield(extraArgs, 'target');
+    end
+    
+    if isfield(extraArgs, 'targets')
+        warning(['you wrote extraArgs.targets instead of' ...
+            'extraArgs.targetFunction'])
+        extraArgs.targetFunction = extraArgs.targets;
+        extraArgs = rmfield(extraArgs, 'targets');
+    end
+    
+    if isfield(extraArgs, 'obstacle')
+        extraArgs.obstacleFunction = extraArgs.obstacle;
+        warning(['you wrote extraArgs.obstacle instead of' ...
+            'extraArgs.obstacleFunction'])
+        extraArgs = rmfield(extraArgs, 'obstacle');
+    end
+    
+    if isfield(extraArgs, 'obstacles')
+        extraArgs.obstacleFunction = extraArgs.obstacles;
+        warning(['you wrote extraArgs.obstacles instead of' ...
+            'extraArgs.obstacleFunction'])
+        extraArgs = rmfield(extraArgs, 'obstacles');
+    end
+end
+
 %% Visualization
 if (isfield(extraArgs, 'visualize') && isstruct(extraArgs.visualize))...
    || (isfield(extraArgs, 'visualize') && ~isstruct(extraArgs.visualize)...
@@ -1043,7 +1109,7 @@ for i = istart:length(tau)
         end
     
     % ---- If Q is empty, we need to exit the outer for-loop as well! --- %
-    if isempty(Q) || ~(~isempty(setdiff(Q, Qold)) || ~isempty(setdiff(Qold, Q)))
+    if isempty(Q) || ~(~isempty(setdiff(Q, Qold)) || ~isempty(setdiff(Qold, Q))) % || numel(Q) < extraArgs.stopConvergeQSize;
         extraOuts.stoptau = tau(i);
         tau(i+1:end) = [];
 
@@ -1250,7 +1316,12 @@ for i = istart:length(tau)
         %---Visualize Value Set--------------------------------------------
         if isfield(extraArgs.visualize, 'valueSet') &&...
                 extraArgs.visualize.valueSet
-            
+            [~, lxOldPlot] = proj(g, lxOld, ~plotDims, projpt);
+            [~, lxCurrPlot] = proj(g, lx, ~plotDims, projpt);
+            visSetIm(gPlot, lxOldPlot, ...
+                'green', sliceLevel, eAT_visSetIm); 
+            visSetIm(gPlot, lxCurrPlot, ...
+                'red', sliceLevel, eAT_visSetIm); 
             extraOuts.hVS = visSetIm(gPlot, dataPlot, ...
                 extraArgs.visualize.plotColorVS, sliceLevel, eAT_visSetIm);
         end

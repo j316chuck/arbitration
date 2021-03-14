@@ -62,7 +62,7 @@ classdef Planner < handle
             obj.control_scheme = exp.blending.control_scheme; 
             obj.dt = exp.dt; 
             obj.num_mpc_steps = ceil(obj.blending.replan_dt / obj.dt); % num steps we take in a mpc 
-             % goes from [0-obj.blending.replan_dt], start of with a replan
+            % goes from [0-obj.blending.replan_dt], start of with a replan
             obj.replan_time_counter = obj.blending.replan_dt;
             obj.num_waypts = exp.num_waypts;
             obj.horizon = exp.horizon;
@@ -99,7 +99,7 @@ classdef Planner < handle
                 brs_planner = obj.brs_planner;
                 filename = sprintf("%s/data/%s_%s/brs_planner.mat", repo.path, exp.map_basename, exp.grid_size); 
                 save(filename, 'brs_planner'); 
-            else
+            elseif strcmp(exp.environment_type, "known")  % load cached planner only if the environment is known
                 filename = sprintf("%s/data/%s_%s/brs_planner.mat", repo.path, exp.map_basename, exp.grid_size); 
                 load(filename, 'brs_planner'); 
                 obj.brs_planner = brs_planner;
@@ -405,7 +405,7 @@ classdef Planner < handle
                 return 
             end 
             obj.verbose_plot(2);     % plot metrics and robot path
-            %obj.plot_unknown_maps(2); % unknown map debugging
+            obj.plot_unknown_maps(2); % unknown map debugging
             %obj.plot_spline_replan(2); % spline replan debugging
             %obj.plot_spline_cost(2); % spline planner debugging
             obj.mpc_plan_time(end+1) = toc(t_mpc_start); 

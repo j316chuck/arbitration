@@ -6,14 +6,14 @@ function [params] = default_hyperparams()
     params.map_name = strcat(repo.path, '/maps/bookstore.png');
     params.gmin_3d = [-10; -10; -pi];
     params.gmax_3d = [5.4; 5.4; pi];
-    params.gnum_3d = [31; 31; 21]; %[51; 51; 16]; %med_large %params.gnum_3d = [41; 41; 16]; % med
-    params.grid_size = "small";  
+    params.gnum_3d = [51; 51; 16]; %[31; 31; 21]; %[51; 51; 16]; %med_large %[31; 31; 21];  %params.gnum_3d = [41; 41; 16]; % med
+    params.grid_size = "med_large";  
     params.goal_radius = 0.5;
     
     %% DynSys
     params.wMax = 1;
     params.vRange = [0.1, 1.0];
-    params.dMax = [0.1, 0.1, 0.05];
+    params.dMax = [0.1, 0.1, 0];
     params.tau = 0:0.5:30;
     
     %% Spline Planner
@@ -23,7 +23,7 @@ function [params] = default_hyperparams()
     %% Start and Goal
     %params.start = [1.5; 1.5; pi/2; 0.01]; %[2; 1; pi/2; 0.01]; %[4; 0; pi/2; 0.01]; %[-9;-9;0;0.01]; 
     %params.goal = [-4; 0; pi/2; 0.01]; %[4; 3; pi/2; 0.01]; 
-    [s, g] = get_all_smoke_test_cases(); 
+    % [s, g] = get_all_smoke_test_cases(); 
     params.start = [-5; 0; pi/2; 0.01]; %[-0.375; -1.915; pi/2; 0.01];  %s{1}; 
     params.goal = [1; 0; pi/2; 0.01]; 
     

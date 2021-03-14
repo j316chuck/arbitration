@@ -55,7 +55,7 @@ function [exp] = load_exp(params)
     end   
     exp.updateMethod = params.updateMethod; 
     exp.avoidBrsSchemeData = avoidBrsSchemeData; 
-    tau = 0:exp.dt:10; 
+    tau = 0:exp.dt:50; 
     exp.brs_planner = BRSAvoidPlanner(exp.grid_3d, exp.avoidBrsSchemeData, tau, exp.dt, exp.updateMethod); 
 
     %% Spline Planner
@@ -91,6 +91,9 @@ function [exp] = load_exp(params)
     exp.clear_dir = params.clear_dir; 
     exp.run_planner = params.run_planner;     
     exp.run_brs = params.run_brs; 
+    if strcmp(params.environment_type, "unknown")
+        exp.run_brs = false; 
+    end 
     exp.save_plot = params.save_plot; 
     exp.plot_level = params.plot_level;    
 end 

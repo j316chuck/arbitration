@@ -2,7 +2,7 @@ function output_analysis()
     %% Change these parameters
     verbose = true;
     repo = what("arbitration"); 
-    output_folder = strcat(repo.path, '/results/3_5_simple_env');
+    output_folder = strcat(repo.path, '/results/3_15');
     results_folder = strcat(output_folder, '/results/');
     output_mat_path = sprintf("%s/%s", results_folder, 'output_analysis.mat');
     if ~exist(results_folder, 'dir')
@@ -14,21 +14,18 @@ function output_analysis()
     params = get_hyperparam_sets("HJIPDE_update_methods"); %"HJIPDE_update_methods" %"time_vary_alpha_open" %"default" %"replan_zls"
 
     %% Get metrics
-    [metrics, exp_names] = get_metrics(output_folder, ... 
-         starts, goals, control_schemes, blend_schemes, params, verbose);
-    save(output_mat_path, 'metrics', 'exp_names'); 
-    
-    %% Write table
-    load(output_mat_path, 'metrics'); 
-    ar_output_csv_path = sprintf("%s/%s", results_folder, 'all_reached_goal_output_analysis.csv'); 
-    rg_output_csv_path = sprintf("%s/%s", results_folder, 'reached_goal_output_analysis.csv'); 
-    output_csv_path = sprintf("%s/%s", results_folder, 'output_analysis.csv'); 
-    write_metrics_table(metrics, control_schemes, blend_schemes, params, ...
-        ar_output_csv_path, true, true, verbose); 
-    write_metrics_table(metrics, control_schemes, blend_schemes, params, ...
-        rg_output_csv_path, false, true, verbose); 
-    write_metrics_table(metrics, control_schemes, blend_schemes, params, ...
-        output_csv_path, false, false, verbose); 
+    dirs = dir(fullfile(output_folder));
+    for it = 1:length(dirs)
+        exp_folder = dirs(it, :); 
+        f = fullfile(exp_folder.folder, exp_folder.name, 'final_state.mat');
+        if contains(f, "HJIPDE") || contains(f, "warm_start") || contains(f, "local_q")
+            load(f, 'obj');
+            fprintf("Update method: %s\n", obj.brs_planner.updateMethod); 
+            fprintf("Average Time: %.2f Std: %.2f\n", mean(obj.hjipde_time), std(obj.hjipde_time)); 
+            fprintf("%f ", obj.hjipde_time); 
+            fprintf("\n"); 
+        end 
+    end 
 end
 
 function [metrics, exp_names] = get_metrics(output_folder, starts, goals, ...

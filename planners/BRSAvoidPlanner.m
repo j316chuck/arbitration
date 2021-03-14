@@ -42,7 +42,10 @@ classdef BRSAvoidPlanner < handle
             obj.extraArgs.visualize.valueSet = 1;
             obj.extraArgs.plotData.plotDims = [1 1 0];
             obj.extraArgs.plotData.projpt = 0;
-            obj.extraArgs.stopConvergeTTR = false;
+            obj.extraArgs.convergeThreshold = 2e-2;
+            obj.extraArgs.stopConverge = true;
+            obj.extraArgs.stopConvergeQSize = 10; 
+            obj.extraArgs.quiet = false; 
             % set updateMethod
             obj.updateMethod = updateMethod; % HJIPDE, warm_start, local_q 
         end
@@ -60,58 +63,72 @@ classdef BRSAvoidPlanner < handle
             end 
         end 
         
-        function solve_brs_avoid_HJIPDE(obj, obstacle_map)
-            if ~isequal(size(obstacle_map), obj.grid.N')
+        function solve_brs_avoid_HJIPDE(obj, new_obstacle_map)
+            if ~isequal(size(new_obstacle_map), obj.grid.N')
                 error("Shape of obstacle_map is not equal to the grid shape");
             end
-            obj.obstacle_map = obstacle_map;
+            obj.obstacle_map = new_obstacle_map;
             % Solve 
+            obj.extraArgs.targets = new_obstacle_map;  
             [obj.data, obj.data_tau, ~] = ...
-                HJIPDE_solve(obj.obstacle_map, obj.tau, obj.schemeData, 'minVOverTime', obj.extraArgs);   
+                HJIPDE_solve(obj.obstacle_map, obj.tau, obj.schemeData, 'minVWithL', obj.extraArgs);
             obj.valueFun = obj.data(:, :, :, end);
             obj.derivValueFun = computeGradients(obj.grid, obj.valueFun);
         end 
        
         %% Solves the brs avoid problem local Q
-        function solve_brs_avoid_local_q(obj, obstacle_map)
-            if ~isequal(size(obstacle_map), obj.grid.N')
+        function solve_brs_avoid_local_q(obj, new_obstacle_map)
+            if ~isequal(size(new_obstacle_map), obj.grid.N')
                 error("Shape of obstacle_map is not equal to the grid shape");
             end
             if isempty(obj.valueFun) % first computation default to original HJIPDE
-                obj.solve_brs_avoid_HJIPDE(obstacle_map); 
-                return; 
+                obj.solve_brs_avoid_HJIPDE(new_obstacle_map); 
+                return;
             else 
                 data0 = obj.valueFun;
+                lCurr = shapeIntersection(new_obstacle_map, obj.obstacle_map);
+                lxOld = obj.obstacle_map;
             end
-            lCurr = obstacle_map;
-            lxOld = obj.obstacle_map;
-            updateEpsilon = 0.01; 
+            updateEpsilon = obj.extraArgs.convergeThreshold; 
+            obj.extraArgs.targets = lCurr;
             [obj.data, obj.data_tau, ~] = ...
-                HJIPDE_solve_localQ(data0, lxOld, lCurr, updateEpsilon, obj.tau, obj.schemeData, 'minVOverTime', obj.extraArgs);   
-            obj.obstacle_map = obstacle_map; 
+                HJIPDE_solve_localQ(data0, lxOld, lCurr, updateEpsilon, obj.tau, obj.schemeData, 'minVWithL', obj.extraArgs);   
+            obj.obstacle_map = new_obstacle_map; 
             obj.valueFun = obj.data(:, :, :, end);
             obj.derivValueFun = computeGradients(obj.grid, obj.valueFun);
         end 
         
         %% Solves the brs avoid problem warm start
-        function solve_brs_avoid_warm_start(obj, obstacle_map)
-            if ~isequal(size(obstacle_map), obj.grid.N')
+        function solve_brs_avoid_warm_start(obj, new_obstacle_map)
+            if ~isequal(size(new_obstacle_map), obj.grid.N')
                 error("Shape of obstacle_map is not equal to the grid shape");
             end
             % Solve 
             warmStart = true;
             if isempty(obj.valueFun)
-                data0 = obstacle_map; 
+                data0 = new_obstacle_map; 
+                lCurr = new_obstacle_map; 
+                lxOld = []; 
             else 
                 data0 = obj.valueFun;
+                lCurr = shapeIntersection(new_obstacle_map, obj.obstacle_map);
+                lxOld = obj.obstacle_map;
             end
-            lCurr = obstacle_map;
-            lxOld = obj.obstacle_map;
-            [obj.data, obj.data_tau, ~] = ...
-                HJIPDE_solve_warm(data0, lxOld, lCurr, obj.tau, obj.schemeData, 'minVOverTime', warmStart, obj.extraArgs);   
-            obj.obstacle_map = obstacle_map; 
+            obj.extraArgs.targets = lCurr;
+            [obj.data, obj.data_tau, extraOuts] = ...
+                HJIPDE_solve_warm(data0, lxOld, lCurr, obj.tau, obj.schemeData, 'minVWithL', warmStart, obj.extraArgs);  
+            %obj.plot_q_size(extraOuts.QSizes); 
+            obj.obstacle_map = new_obstacle_map; 
             obj.valueFun = obj.data(:, :, :, end);
             obj.derivValueFun = computeGradients(obj.grid, obj.valueFun);
+        end 
+        
+        function plot_q_size(obj, QSizes)
+            figure(11); 
+            plot(1:length(QSizes), QSizes, 'ro--', 'DisplayName', 'Q size'); 
+            xlabel("num iterations"); 
+            ylabel("Q size"); 
+            title("Q size converge plot");
         end 
 
 

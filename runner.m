@@ -2,10 +2,10 @@ function runner(start_pos, end_pos)
     %% Set up experiment parameters
     dry_run = false; 
     no_rerun = true; 
-    run_planners = true; 
+    run_planners = false; 
     blend_schemes = {'none'};   
     control_schemes = {'switch'};   
-    nav_task_type = "simple_env"; %"sampled"; %"smoke";  
+    nav_task_type = "sampled"; %"simple_env"; %"sampled"; %"smoke";  
     [starts, goals] = get_point_nav_tasks(nav_task_type); 
     hyperparam_set_type = "HJIPDE_update_methods"; %"time_vary_alpha_open"; %"default"; %"replan_zls"; %"HJIPDE_update_methods"
     hyperparam_sets = get_hyperparam_sets(hyperparam_set_type); 
